@@ -1,2 +1,2 @@
 # vscp-demo-pico-frige-ctrl
-A simpel demo that can be used to control temperature of a  ridge
+A simpel demo that can be used to control temperature of a  fridge
