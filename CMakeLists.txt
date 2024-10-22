@@ -60,6 +60,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE
         pico_stdlib
         hardware_spi
         hardware_dma
+        hardware_adc
         ETHERNET_FILES
         IOLIBRARY_FILES
         MQTT_FILES
