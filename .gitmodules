@@ -1,0 +1,12 @@
+[submodule "WIZnet-PICO-C"]
+	path = WIZnet-PICO-C
+	url = https://github.com/WIZnet-ioNIC/WIZnet-PICO-C.git
+[submodule "pico-sdk"]
+	path = pico-sdk
+	url = https://github.com/raspberrypi/pico-sdk.git
+[submodule "vscp"]
+	path = vscp
+	url = https://github.com/grodansparadis/vscp
+[submodule "vscp-firmware"]
+	path = vscp-firmware
+	url = https://github.com/grodansparadis/vscp-firmware
