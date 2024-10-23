@@ -5,34 +5,36 @@ A simple VSCP demo that can be used to control temperature of a fridge using the
 
 ### Publish topic
 
-**Default:** /vscp/GUID/class/type/index
+/vscp/GUID/class/type/index
 
 ### Subscribe topic
 
-**Default:** /vscp/GUID
+/vscp/GUID
 
 Event sent on this topic will be handled by the device.
 
 
 ## Registers
 
-| Offset | Page | Description |
-| ------ | ---- | ----------- |
-| 0 | 0 | Zone |
-| 1 | 0 | Subzone |
-| 2 | 0 | Status <br /> bit 0 - Compressor. |
-| 3 | 0 | Config <br /> bit 0 - Send alarm on high.<br /> bit 1 - Send alarm on low.<br /> bit 2 - Send alarm on high.<br /> bit 7 - enable |
-| 4 | 0 | Period for temperature event. Set to zero to disable. |
-| 5 | 0 | Current fridge temperature * 100 MSB |
-| 6 | 0 | Current fridge temperature * 100 LSB |
-| 7 | 0 | B coefficient MSB |
-| 8 | 0 | B coefficient LSB |
-| 9 | 0 | Temperature * 100 signed offset MSB |
-| 10 | 0 | Temperature * 100 signed offset LSB |
-| 11 | 0 | Low alarm temperature * 100 signed MSB |
-| 12 | 0 | Low alarm temperature * 100 signed LSB |
-| 13 | 0 | High alarm temperature * 100 signed MSB |
-| 14 | 0 | High alarm temperature * 100 signed LSB |
+| Register | Description |
+| ------ | ----------- |
+| 0 | Zone |
+| 1 | Subzone |
+| 2 | Status <br /> bit 0 - Compressor. |
+| 3 | Config <br /> bit 0 - Send alarm on high.<br /> bit 1 - Send alarm on low.<br /> bit 2 - Send alarm on high.<br /> bit 7 - enable if set to one |
+| 4 | Period for temperature event in seconds. Set to zero to disable. Default: 60 |
+| 5 | Current fridge temperature * 100 MSB |
+| 6 | Current fridge temperature * 100 LSB |
+| 7 | B coefficient MSB Default: |
+| 8 | B coefficient LSB |
+| 9 | Temperature * 100 signed offset MSB |
+| 10 | Temperature * 100 signed offset LSB |
+| 11 | Low alarm temperature * 100 signed int16_t MSB |
+| 12 | Low alarm temperature * 100 signed int16_t LSB |
+| 13 | High alarm temperature * 100 signed int16_t MSB |
+| 14 | High alarm temperature * 100 signed int16_t LSB |
+| 15 | Hysteresis, unsigned uint8_t |
+| 16 | Settemp, signed uint8_t |
 
 
 ## Remote variables

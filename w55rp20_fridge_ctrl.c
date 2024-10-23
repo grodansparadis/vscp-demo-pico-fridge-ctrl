@@ -1,14 +1,26 @@
-/**
- * Copyright (c) 2021 WIZnet Co.,Ltd
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
+// w55rp20_fridge_ctrl.c
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version
+// 2 of the License, or (at your option) any later version.
+//
+// This file is part of the VSCP (https://www.vscp.org)
+//
+// Copyright (C) 2000-2024 Ake Hedman,
+// the VSCP project, <info@vscp.org>
+//
+// This file is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this file see the file COPYING.  If not, write to
+// the Free Software Foundation, 59 Temple Place - Suite 330,
+// Boston, MA 02111-1307, USA.
+//
 
-/**
- * ----------------------------------------------------------------------------------------------------
- * Includes
- * ----------------------------------------------------------------------------------------------------
- */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -26,41 +38,10 @@
 
 #include "timer/timer.h"
 
-/**
- * ----------------------------------------------------------------------------------------------------
- * Macros
- * ----------------------------------------------------------------------------------------------------
- */
-/* Clock */
-#define PLL_SYS_KHZ (133 * 1000)
+#include "w55rp20_fridge_ctrl.h"
 
-/* Buffer */
-#define ETHERNET_BUF_MAX_SIZE (1024 * 2)
 
-/* Socket */
-#define SOCKET_MQTT 0
 
-/* Port */
-#define PORT_MQTT 1883
-
-/* Timeout */
-#define DEFAULT_TIMEOUT 1000 // 1 second
-
-/* MQTT */
-#define MQTT_CLIENT_ID "rpi-pico"
-#define MQTT_USERNAME "vscp"
-#define MQTT_PASSWORD "secret"
-#define MQTT_PUBLISH_TOPIC "publish_topic"
-#define MQTT_PUBLISH_PAYLOAD "Hello, World!"
-#define MQTT_PUBLISH_PERIOD (1000 * 10) // 10 seconds
-#define MQTT_SUBSCRIBE_TOPIC "subscribe_topic"
-#define MQTT_KEEP_ALIVE 60 // 60 milliseconds
-
-/**
- * ----------------------------------------------------------------------------------------------------
- * Variables
- * ----------------------------------------------------------------------------------------------------
- */
 /* Network */
 static wiz_NetInfo g_net_info = {
     .mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x56}, // MAC address
@@ -88,11 +69,7 @@ static MQTTMessage g_mqtt_message;
 /* Timer  */
 static volatile uint32_t g_msec_cnt = 0;
 
-/**
- * ----------------------------------------------------------------------------------------------------
- * Functions
- * ----------------------------------------------------------------------------------------------------
- */
+
 /* Clock */
 static void set_clock_khz(void);
 
@@ -106,11 +83,7 @@ static time_t millis(void);
 /* Fridge control */
 static float readFridgeTemperature(void);
 
-/**
- * ----------------------------------------------------------------------------------------------------
- * Main
- * ----------------------------------------------------------------------------------------------------
- */
+
 int main() {
   /* Initialize */
   int32_t retval = 0;
