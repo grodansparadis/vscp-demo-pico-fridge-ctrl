@@ -13,16 +13,16 @@
 #include <string.h>
 #include <time.h>
 
-#include "hardware/gpio.h"
 #include "hardware/adc.h"
+#include "hardware/gpio.h"
 
 #include "port_common.h"
 
 #include "wizchip_conf.h"
 #include "w5x00_spi.h"
 
-#include "mqtt_interface.h"
 #include "MQTTClient.h"
+#include "mqtt_interface.h"
 
 #include "timer/timer.h"
 
@@ -62,14 +62,13 @@
  * ----------------------------------------------------------------------------------------------------
  */
 /* Network */
-static wiz_NetInfo g_net_info =
-    {
-        .mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x56},    // MAC address
-        .ip = {192, 168, 1, 200},                       // IP address
-        .sn = {255, 255, 255, 0},                       // Subnet Mask
-        .gw = {192, 168, 1, 1},                         // Gateway
-        .dns = {8, 8, 8, 8},                            // DNS server
-        .dhcp = NETINFO_STATIC                          // DHCP enable/disable
+static wiz_NetInfo g_net_info = {
+    .mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x56}, // MAC address
+    .ip = {192, 168, 1, 200},                    // IP address
+    .sn = {255, 255, 255, 0},                    // Subnet Mask
+    .gw = {192, 168, 1, 1},                      // Gateway
+    .dns = {8, 8, 8, 8},                         // DNS server
+    .dhcp = NETINFO_STATIC                       // DHCP enable/disable
 };
 
 /* MQTT */
@@ -82,7 +81,8 @@ static uint8_t g_mqtt_recv_buf[ETHERNET_BUF_MAX_SIZE] = {
 static uint8_t g_mqtt_broker_ip[4] = {192, 168, 1, 7};
 static Network g_mqtt_network;
 static MQTTClient g_mqtt_client;
-static MQTTPacket_connectData g_mqtt_packet_connect_data = MQTTPacket_connectData_initializer;
+static MQTTPacket_connectData g_mqtt_packet_connect_data =
+    MQTTPacket_connectData_initializer;
 static MQTTMessage g_mqtt_message;
 
 /* Timer  */
@@ -108,137 +108,133 @@ static time_t millis(void);
  * Main
  * ----------------------------------------------------------------------------------------------------
  */
-int main()
-{
-    /* Initialize */
-    int32_t retval = 0;
-    uint32_t start_ms = 0;
-    uint32_t end_ms = 0;
+int main() {
+  /* Initialize */
+  int32_t retval = 0;
+  uint32_t start_ms = 0;
+  uint32_t end_ms = 0;
 
-    set_clock_khz();
+  set_clock_khz();
 
-    stdio_init_all();
+  stdio_init_all();
 
-    printf("Initialized\n");
+  printf("Initialized\n");
 
-    adc_init();
+  adc_init();
 
-    // Make sure GPIO is high-impedance, no pullups etc
-    adc_gpio_init(26);
-    // Select ADC input 0 (GPIO26)
-    adc_select_input(0);
+  // Make sure GPIO is high-impedance, no pullups etc
+  adc_gpio_init(26);
+  // Select ADC input 0 (GPIO26)
+  adc_select_input(0);
 
-    wizchip_spi_initialize();
-    wizchip_cris_initialize();
+  wizchip_spi_initialize();
+  wizchip_cris_initialize();
 
-    wizchip_reset();
-    wizchip_initialize();
-    wizchip_check();
+  wizchip_reset();
+  wizchip_initialize();
+  wizchip_check();
 
-    wizchip_1ms_timer_initialize(repeating_timer_callback);
+  wizchip_1ms_timer_initialize(repeating_timer_callback);
 
-    network_initialize(g_net_info);
+  network_initialize(g_net_info);
 
-    /* Get network information */
-    print_network_information(g_net_info);
+  /* Get network information */
+  print_network_information(g_net_info);
 
-    NewNetwork(&g_mqtt_network, SOCKET_MQTT);
+  NewNetwork(&g_mqtt_network, SOCKET_MQTT);
 
-    retval = ConnectNetwork(&g_mqtt_network, g_mqtt_broker_ip, PORT_MQTT);
+  retval = ConnectNetwork(&g_mqtt_network, g_mqtt_broker_ip, PORT_MQTT);
 
-    if (retval != 1)
-    {
-        printf(" Network connect failed\n");
+  if (retval != 1) {
+    printf(" Network connect failed\n");
 
-        while (1)
-            ;
-    }
-
-    /* Initialize MQTT client */
-    MQTTClientInit(&g_mqtt_client, &g_mqtt_network, DEFAULT_TIMEOUT, g_mqtt_send_buf, ETHERNET_BUF_MAX_SIZE, g_mqtt_recv_buf, ETHERNET_BUF_MAX_SIZE);
-
-    /* Connect to the MQTT broker */
-    g_mqtt_packet_connect_data.MQTTVersion = 3;
-    g_mqtt_packet_connect_data.cleansession = 1;
-    g_mqtt_packet_connect_data.willFlag = 0;
-    g_mqtt_packet_connect_data.keepAliveInterval = MQTT_KEEP_ALIVE;
-    g_mqtt_packet_connect_data.clientID.cstring = MQTT_CLIENT_ID;
-    g_mqtt_packet_connect_data.username.cstring = MQTT_USERNAME;
-    g_mqtt_packet_connect_data.password.cstring = MQTT_PASSWORD;
-
-    retval = MQTTConnect(&g_mqtt_client, &g_mqtt_packet_connect_data);
-
-    if (retval < 0)
-    {
-        printf(" MQTT connect failed : %d\n", retval);
-
-        while (1)
-            ;
-    }
-
-    printf(" MQTT connected\n");
-
-    /* Configure publish message */
-    g_mqtt_message.qos = QOS0;
-    g_mqtt_message.retained = 0;
-    g_mqtt_message.dup = 0;
-    g_mqtt_message.payload = MQTT_PUBLISH_PAYLOAD;
-    g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
-
-    /* Subscribe */
-    retval = MQTTSubscribe(&g_mqtt_client, MQTT_SUBSCRIBE_TOPIC, QOS0, message_arrived);
-
-    if (retval < 0)
-    {
-        printf(" Subscribe failed : %d\n", retval);
-
-        while (1)
-            ;
-    }
-
-    printf(" Subscribed\n");
-
-    start_ms = millis();
-
-    /* Infinite loop */
     while (1)
-    {
-        if ((retval = MQTTYield(&g_mqtt_client, g_mqtt_packet_connect_data.keepAliveInterval)) < 0)
-        {
-            printf(" Yield error : %d\n", retval);
+      ;
+  }
 
-            while (1)
-                ;
-        }
+  /* Initialize MQTT client */
+  MQTTClientInit(&g_mqtt_client, &g_mqtt_network, DEFAULT_TIMEOUT,
+                 g_mqtt_send_buf, ETHERNET_BUF_MAX_SIZE, g_mqtt_recv_buf,
+                 ETHERNET_BUF_MAX_SIZE);
 
-        
+  /* Connect to the MQTT broker */
+  g_mqtt_packet_connect_data.MQTTVersion = 3;
+  g_mqtt_packet_connect_data.cleansession = 1;
+  g_mqtt_packet_connect_data.willFlag = 0;
+  g_mqtt_packet_connect_data.keepAliveInterval = MQTT_KEEP_ALIVE;
+  g_mqtt_packet_connect_data.clientID.cstring = MQTT_CLIENT_ID;
+  g_mqtt_packet_connect_data.username.cstring = MQTT_USERNAME;
+  g_mqtt_packet_connect_data.password.cstring = MQTT_PASSWORD;
 
-        end_ms = millis();
+  retval = MQTTConnect(&g_mqtt_client, &g_mqtt_packet_connect_data);
 
-        if (end_ms > start_ms + MQTT_PUBLISH_PERIOD)
-        {
+  if (retval < 0) {
+    printf(" MQTT connect failed : %d\n", retval);
 
-          // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
-        const float conversion_factor = 3.3f / (1 << 12);
-        uint16_t result = adc_read();
-        printf("Raw value: 0x%03x, voltage: %f V\n", result, result * conversion_factor);
-        
-            /* Publish */
-            retval = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
+    while (1)
+      ;
+  }
 
-            if (retval < 0)
-            {
-                printf(" Publish failed : %d\n", retval);
+  printf(" MQTT connected\n");
 
-                while (1)
-                    ;
-            }
+  /* Configure publish message */
+  g_mqtt_message.qos = QOS0;
+  g_mqtt_message.retained = 0;
+  g_mqtt_message.dup = 0;
+  g_mqtt_message.payload = MQTT_PUBLISH_PAYLOAD;
+  g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
 
-            printf(" Published\n");
+  /* Subscribe */
+  retval = MQTTSubscribe(&g_mqtt_client, MQTT_SUBSCRIBE_TOPIC, QOS0,
+                         message_arrived);
 
-            start_ms = millis();
-        }
+  if (retval < 0) {
+    printf(" Subscribe failed : %d\n", retval);
+
+    while (1)
+      ;
+  }
+
+  printf(" Subscribed\n");
+
+  start_ms = millis();
+
+  /* Infinite loop */
+  while (1) {
+    if ((retval = MQTTYield(&g_mqtt_client,
+                            g_mqtt_packet_connect_data.keepAliveInterval)) <
+        0) {
+      printf(" Yield error : %d\n", retval);
+
+      while (1)
+        ;
     }
+
+    end_ms = millis();
+
+    if (end_ms > start_ms + MQTT_PUBLISH_PERIOD) {
+
+      // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
+      const float conversion_factor = 3.3f / (1 << 12);
+      uint16_t result = adc_read();
+      printf("Raw value: 0x%03x, voltage: %f V\n", result,
+             result * conversion_factor);
+
+      /* Publish */
+      retval = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
+
+      if (retval < 0) {
+        printf(" Publish failed : %d\n", retval);
+
+        while (1)
+          ;
+      }
+
+      printf(" Published\n");
+
+      start_ms = millis();
+    }
+  }
 }
 
 /**
@@ -247,38 +243,50 @@ int main()
  * ----------------------------------------------------------------------------------------------------
  */
 /* Clock */
-static void set_clock_khz(void)
-{
-    // set a system clock frequency in khz
-    set_sys_clock_khz(PLL_SYS_KHZ, true);
+static void set_clock_khz(void) {
+  // set a system clock frequency in khz
+  set_sys_clock_khz(PLL_SYS_KHZ, true);
 
-    // configure the specified clock
-    clock_configure(
-        clk_peri,
-        0,                                                // No glitchless mux
-        CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS, // System PLL on AUX mux
-        PLL_SYS_KHZ * 1000,                               // Input frequency
-        PLL_SYS_KHZ * 1000                                // Output (must be same as no divider)
-    );
+  // configure the specified clock
+  clock_configure(
+      clk_peri,
+      0,                                                // No glitchless mux
+      CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS, // System PLL on AUX mux
+      PLL_SYS_KHZ * 1000,                               // Input frequency
+      PLL_SYS_KHZ * 1000 // Output (must be same as no divider)
+  );
 }
 
 /* MQTT */
-static void message_arrived(MessageData *msg_data)
-{
-    MQTTMessage *message = msg_data->message;
+static void message_arrived(MessageData *msg_data) {
+  MQTTMessage *message = msg_data->message;
 
-    printf("%.*s", (uint32_t)message->payloadlen, (uint8_t *)message->payload);
+  printf("%.*s", (uint32_t)message->payloadlen, (uint8_t *)message->payload);
 }
 
 /* Timer */
-static void repeating_timer_callback(void)
-{
-    g_msec_cnt++;
+static void repeating_timer_callback(void) {
+  g_msec_cnt++;
 
-    MilliTimer_Handler();
+  MilliTimer_Handler();
 }
 
-static time_t millis(void)
+static time_t millis(void) { return g_msec_cnt; }
+
+///////////////////////////////////////////////////////////////////////////////
+// readAdc
+//
+
+static float readAdc(uint8_t channel) 
 {
-    return g_msec_cnt;
+
+  // Select ADC input (0 (GPIO26))
+  adc_select_input(channel);
+
+  // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
+  const float conversion_factor = 3.3f / (1 << 12);
+  uint16_t result = adc_read();
+  printf("Raw value: 0x%03x, voltage: %f V\n", result,
+         result * conversion_factor);
+  return (result * conversion_factor);
 }

@@ -51,8 +51,8 @@ add_executable(${TARGET_NAME}
 
 target_include_directories(${TARGET_NAME} PRIVATE
         WIZnet-PICO-C/port/
-        WIZnet-PICO-C/libraries/ioLibrary_Driver/Ethernet/
         WIZnet-PICO-C/port/ioLibrary_Driver/inc/
+        WIZnet-PICO-C/libraries/ioLibrary_Driver/Ethernet/        
         WIZnet-PICO-C/libraries/ioLibrary_Driver/Internet/MQTT/
         )        
 

@@ -10,3 +10,6 @@
 [submodule "vscp-firmware"]
 	path = vscp-firmware
 	url = https://github.com/grodansparadis/vscp-firmware
+[submodule "tiny-json"]
+	path = tiny-json
+	url = https://github.com/rafagafe/tiny-json.git
