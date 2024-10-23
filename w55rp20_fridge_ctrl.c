@@ -103,6 +103,9 @@ static void message_arrived(MessageData *msg_data);
 static void repeating_timer_callback(void);
 static time_t millis(void);
 
+/* Fridge control */
+static float readFridgeTemperature(void);
+
 /**
  * ----------------------------------------------------------------------------------------------------
  * Main
@@ -124,6 +127,7 @@ int main() {
 
   // Make sure GPIO is high-impedance, no pullups etc
   adc_gpio_init(26);
+
   // Select ADC input 0 (GPIO26)
   adc_select_input(0);
 
@@ -217,9 +221,9 @@ int main() {
       // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
       const float conversion_factor = 3.3f / (1 << 12);
       uint16_t result = adc_read();
-      printf("Raw value: 0x%03x, voltage: %f V\n", result,
-             result * conversion_factor);
-
+      // printf("Raw value: 0x%03x, voltage: %f V\n", result,
+      //        result * conversion_factor);
+      printf("Raw value: 0x%03x, voltage: %f V\n", result, readFridgeTemperature());
       /* Publish */
       retval = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
 
@@ -274,19 +278,57 @@ static void repeating_timer_callback(void) {
 static time_t millis(void) { return g_msec_cnt; }
 
 ///////////////////////////////////////////////////////////////////////////////
-// readAdc
+// readFridgeTemperature
 //
 
-static float readAdc(uint8_t channel) 
+static float readFridgeTemperature(void) 
 {
-
   // Select ADC input (0 (GPIO26))
-  adc_select_input(channel);
+  adc_select_input(0);
 
   // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
   const float conversion_factor = 3.3f / (1 << 12);
   uint16_t result = adc_read();
   printf("Raw value: 0x%03x, voltage: %f V\n", result,
          result * conversion_factor);
-  return (result * conversion_factor);
+  
+  // Use B-constant
+    // ==============
+    // http://en.wikipedia.org/wiki/Thermistor
+    // R1 = (R2V - R2V2) / V2  R2= 10K, V = 3.3V,  V2 = adc * voltage/4094
+    // T = B / ln(r/Rinf)
+    // Rinf = R0 e (-B/T0), R0=10K, T0 = 273.15 + 25 = 298.15
+
+    uint16_t B = 3450;
+    double calVoltage = 3.3;
+
+    double Rinf = 10000.0 * exp(B / -298.15);
+
+    // V2 = adc * voltage/4096
+    double v = calVoltage * (double)result / 4096;
+
+    // R1 = (R2V - R2V2) / V2  R2= 10K, V = 5V,  V2 = adc * voltage/1024
+    double resistance = (10000.0 * (calVoltage - v)) / v;
+
+    // itemp = r;
+    double temp = ((double)B) / log(resistance / Rinf);
+    // itemp = log(r/Rinf);
+    temp -= 273.15; // Convert Kelvin to Celsius
+
+    // avarage = testadc;
+    /*  https://learn.adafruit.com/thermistor/using-a-thermistor
+    avarage = (1023/avarage) - 1;
+    avarage = 10000 / avarage;      // Resistance of termistor
+    //temp = avarage/10000;           // (R/Ro)
+    temp = 10000/avarage;
+    temp = log(temp);               // ln(R/Ro)
+    temp /= B;                      // 1/B * ln(R/Ro)
+    temp += 1.0 / (25 + 273.15);    // + (1/To)
+    temp = 1.0 / temp;              // Invert
+    temp -= 273.15;
+    */
+    uint32_t current_temp = (long)(temp * 100);
+    printf("Temperature: %f C\n", temp);
+
+    return temp;
 }
