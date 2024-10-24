@@ -40,7 +40,7 @@
 #include "timer/timer.h"
 
 #include <string.h>
-#include <tiny-json.h>
+
 
 #include "vscp-firmware-helper.h"
 #include "vscp-firmware-level2.h"
