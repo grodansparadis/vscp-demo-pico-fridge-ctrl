@@ -20,7 +20,7 @@ Event sent on this topic will be handled by the device.
 | ------ | ----------- |
 | 0 | Zone |
 | 1 | Subzone |
-| 2 | Status <br /> bit 0 - Compressor. |
+| 2 | Status <br /> bit 0 - Compressor on=1/off=0. |
 | 3 | Config <br /> bit 0 - Send alarm on high.<br /> bit 1 - Send alarm on low.<br /> bit 2 - Send alarm on high.<br /> bit 7 - enable if set to one |
 | 4 | Period for temperature event in seconds. Set to zero to disable. Default: 60 |
 | 5 | Current fridge temperature * 100 MSB |

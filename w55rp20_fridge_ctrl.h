@@ -68,6 +68,16 @@ typedef struct fridgectrl {
   uint8_t zone;
   uint8_t subzone;
   uint16_t bCoefficient;
+  bool bActive; /* True if unit is active */
+  bool bAlarmOnLow; /* True if unit sends alarm on low temperature */
+  bool bAlarmOnHigh; /* True if unit sends alarm on high temperature */
+  double temp_current;    /* Current temperature */
+  double temp_setpoint;   /* Setpoint temperature */
+  double temp_alarm_low;  /* Low temperature alarm limit */
+  double temp_alarm_high; /* High temperature alarm limit */
+  uint8_t hysterersis;
+  uint8_t temp_report_period; /* Interval in seconds for temp reports. Zero
+                                    is off */
 } fridgectrl_t;
 
 #endif
