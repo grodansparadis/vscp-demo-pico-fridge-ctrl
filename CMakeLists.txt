@@ -42,7 +42,8 @@ add_executable(${TARGET_NAME}
         ${TARGET_NAME}.c
         ${CMAKE_SOURCE_DIR}/vscp-firmware/common/vscp-firmware-helper.c
         ${CMAKE_SOURCE_DIR}/vscp-firmware/common/vscp-firmware-level2.c
-        tiny-json/tiny-json.h
+#        tiny-json/tiny-json.h
+        vscp-firmware/third-party/cJSON/cJSON.c
         )
 
 target_include_directories(${TARGET_NAME} PRIVATE
@@ -51,8 +52,9 @@ target_include_directories(${TARGET_NAME} PRIVATE
         WIZnet-PICO-C/port/ioLibrary_Driver/inc/
         WIZnet-PICO-C/libraries/ioLibrary_Driver/Ethernet/
         WIZnet-PICO-C/libraries/ioLibrary_Driver/Internet/MQTT/
-        tiny-json
+#        tiny-json
         vscp-firmware/common 
+        vscp-firmware/third-party/cJSON
         vscp/src/vscp/common
         )
 
