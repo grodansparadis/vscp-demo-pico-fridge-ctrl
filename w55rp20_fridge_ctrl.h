@@ -40,7 +40,7 @@
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
 /* MQTT */
-#define MQTT_CLIENT_ID "rpi-pico"
+#define MQTT_CLIENT_ID "w55rp20-fridge"
 #define MQTT_USERNAME "vscp"
 #define MQTT_PASSWORD "secret"
 #define MQTT_PUBLISH_TOPIC "publish_topic"
@@ -50,7 +50,7 @@
 #define MQTT_KEEP_ALIVE 60 // 60 milliseconds
 
 // VSCP
-#define URL_MDF "w55rp20_fridgectrl01.mdf"
+#define MDF_URL "w55rp20_fridgectrl01.mdf"
 
 // *** Defaults ***
 #define DEFAULT_ZONE 0

@@ -21,6 +21,7 @@
 // Boston, MA 02111-1307, USA.
 //
 
+// clang-format off
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,13 +40,13 @@
 
 #include "timer/timer.h"
 
-#include <string.h>
-
-
+#include <vscp-class.h>
+#include <vscp-type.h>
 #include "vscp-firmware-helper.h"
 #include "vscp-firmware-level2.h"
 
 #include "w55rp20_fridge_ctrl.h"
+// clang-format on
 
 /* Network */
 static wiz_NetInfo g_net_info = {
@@ -56,6 +57,14 @@ static wiz_NetInfo g_net_info = {
   .dns  = { 8, 8, 8, 8 },                         // DNS server
   .dhcp = NETINFO_STATIC                          // DHCP enable/disable
 };
+
+/*
+  Topic is "vscp/GUID/class/type/index" and the base "vscp/GUID/"is set here. The topic base
+  is used by both subscribe and publish
+    max: vscp/00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00/32767/65535/255 (length: 68)
+  set to ethernet prefix + mac-addr (from g_net_info above) + 00:01
+*/
+static char g_mqtt_pub_topic_base[55] = {"vscp/FF:FF:FF:FF:FF:FF:FF:FE:00:08:DC:12:34:56:00:01/"};
 
 /* MQTT */
 static uint8_t g_mqtt_send_buf[ETHERNET_BUF_MAX_SIZE] = {
@@ -91,19 +100,19 @@ millis(void);
 static float
 readFridgeTemperature(void);
 
+static int
+init_vscp(vscp_frmw2_firmware_config_t *pcfg);
+
 int
 main()
 {
   /* Initialize */
   int32_t retval    = 0;
   uint32_t start_ms = 0;
-  uint32_t end_ms   = 0;
   vscp_frmw2_firmware_config_t cfg;
   int rv;
 
-  rv = vscp_fwhlp_isLittleEndian();
-  rv = vscp_fwhlp_isBigEndian();
-
+  rv = init_vscp(&cfg);
   rv = vscp_frmw2_init(&cfg);
 
   set_clock_khz();
@@ -181,7 +190,7 @@ main()
   g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
 
   /* Subscribe */
-  retval = MQTTSubscribe(&g_mqtt_client, MQTT_SUBSCRIBE_TOPIC, QOS0, message_arrived);
+  retval = MQTTSubscribe(&g_mqtt_client, g_mqtt_pub_topic_base, QOS0, message_arrived);
 
   if (retval < 0) {
     printf(" Subscribe failed : %d\n", retval);
@@ -194,8 +203,9 @@ main()
 
   start_ms = millis();
 
-  /* Infinite loop */
+  /* Work loop */
   while (1) {
+
     if ((retval = MQTTYield(&g_mqtt_client, g_mqtt_packet_connect_data.keepAliveInterval)) < 0) {
       printf(" Yield error : %d\n", retval);
 
@@ -203,9 +213,8 @@ main()
         ;
     }
 
-    end_ms = millis();
-
-    if (end_ms > start_ms + MQTT_PUBLISH_PERIOD) {
+    // Heartbeat
+    if (millis() > (start_ms + cfg.m_interval_heartbeat)) {
 
       // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
       const float conversion_factor = 3.3f / (1 << 12);
@@ -213,7 +222,21 @@ main()
       // printf("Raw value: 0x%03x, voltage: %f V\n", result,
       //        result * conversion_factor);
       printf("Raw value: 0x%03x, voltage: %f V\n", result, readFridgeTemperature());
+
       /* Publish */
+      vscpEventEx ex;
+      memset(&ex,0, sizeof(ex));
+
+      ex.head = 0;
+      memcpy(ex.GUID,cfg.m_guid,16);
+      ex.timestamp = vscp_frmw2_callback_get_timestamp(NULL);
+      ex.vscp_class = VSCP_CLASS1_INFORMATION;
+      ex.vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+      ex.sizeData = 3;
+      ex.data[0] = 0;
+      ex.data[1] = cfg.m_zone;
+      ex.data[2] = cfg.m_subzone;
+
       retval = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
 
       if (retval < 0) {
@@ -353,11 +376,63 @@ readFridgeTemperature(void)
 //                               VSCP
 ///////////////////////////////////////////////////////////////////////////////
 
-int
-init_vscp(vscp_frmw2_firmware_config_t* pcfg)
+static int
+init_vscp(vscp_frmw2_firmware_config_t *pcfg)
 {
   int rv;
 
+  memset(pcfg, 0, sizeof(vscp_frmw2_firmware_config_t));
+
+  pcfg->m_level     = VSCP_LEVEL2;
+  pcfg->m_puserdata = NULL;
+
+  pcfg->m_probe_timeout       = VSCP_PROBE_TIMEOUT;
+  pcfg->m_probe_timeout_count = VSCP_PROBE_TIMEOUT_COUNT;
+
+  pcfg->m_interval_heartbeat = 30000;
+  pcfg->m_interval_caps      = 240000;
+
+  pcfg->m_pDm         = NULL; // Pointer to decision matrix storage (NULL if no DM).
+  pcfg->m_nDmRows     = 0;    // Number of DM rows (0 if no DM).
+  pcfg->m_sizeDmRow   = 0;    // Size for one DM row.
+  pcfg->m_regOffsetDm = 0;    // Register offset for DM (normally zero)
+  pcfg->m_pageDm      = 0;    // Register page where DM definition starts
+
+  pcfg->m_pInternalMdf = NULL; // No internal MDF
+
+  pcfg->m_bInterestedInAllEvents = true;
+  pcfg->m_pEventsOfInterest      = NULL; // All events
+
+  pcfg->m_guid[15] = 0xff; // Ethernet prefix
+  pcfg->m_guid[14] = 0xff;
+  pcfg->m_guid[13] = 0xff;
+  pcfg->m_guid[12] = 0xff;
+  pcfg->m_guid[11] = 0xff;
+  pcfg->m_guid[10] = 0xff;
+  pcfg->m_guid[9]  = 0xff;
+  pcfg->m_guid[8]  = 0xf3;
+
+  pcfg->m_guid[7] = g_net_info.mac[0];
+  pcfg->m_guid[6] = g_net_info.mac[1];
+  pcfg->m_guid[5] = g_net_info.mac[2];
+  pcfg->m_guid[4] = g_net_info.mac[3];
+  pcfg->m_guid[3] = g_net_info.mac[4];
+  pcfg->m_guid[2] = g_net_info.mac[5];
+  pcfg->m_guid[1] = 0x00;
+  pcfg->m_guid[0] = 0x01;
+
+  // Set MDF url
+  strncpy(pcfg->m_mdfurl, MDF_URL, 32);
+
+  // Create MQTT subscribe/publishing base
+  sprintf(g_mqtt_pub_topic_base, 
+            "vscp/FF:FF:FF:FF:FF:FF:FF:FE:%02X:%02X:%02X:%02X:%02X:%02X:00:01",
+            g_net_info.mac[0],
+            g_net_info.mac[1],
+            g_net_info.mac[2],
+            g_net_info.mac[3],
+            g_net_info.mac[4],
+            g_net_info.mac[5]);
   return rv;
 }
 
@@ -371,9 +446,9 @@ vscp_frmw2_callback_get_timestamp(void *const puserdata)
   absolute_time_t t;
   uint64_t tus;
 
-  t = get_absolute_time();
+  t   = get_absolute_time();
   tus = to_us_since_boot(t);
-  return (uint32_t)tus;
+  return (uint32_t) tus;
 }
 
 void
@@ -454,6 +529,38 @@ int
 vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
 {
   int rv;
+  char buf[512];
+  /* Publish */
+      // vscpEventEx ex;
+      // memset(&ex,0, sizeof(ex));
+
+      // ex.head = 0;
+      // memcpy(ex.GUID,cfg.m_guid,16);
+      // ex.timestamp = vscp_frmw2_callback_get_timestamp(NULL);
+      // ex.vscp_class = VSCP_CLASS1_INFORMATION;
+      // ex.vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+      // ex.sizeData = 3;
+      // ex.data[0] = 0;
+      // ex.data[1] = cfg.m_zone;
+      // ex.data[2] = cfg.m_subzone;
+
+      if (VSCP_ERROR_SUCCESS != (rv =  vscp_fwhlp_create_json_ex(buf, sizeof(buf), pex))) {
+        printf("Failed to create JSON event ex %d", rv);
+        return rv;
+      }
+
+      /* Configure publish message */
+      MQTTMessage mqtt_msg;
+      mqtt_msg.qos        = QOS0;
+      mqtt_msg.retained   = 0;
+      mqtt_msg.dup        = 0;
+      mqtt_msg.payload    = buf;
+      mqtt_msg.payloadlen = strlen(g_mqtt_message.payload);
+
+      if ((rv = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &mqtt_msg)) < 0) {
+        printf(" Publish failed : %d\n", rv);
+        return VSCP_ERROR_WRITE_ERROR;
+      }
 
   return rv;
 }
