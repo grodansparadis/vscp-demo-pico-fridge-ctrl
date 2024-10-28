@@ -71,5 +71,5 @@ As all VSCP devices the fridge controller have register that defines it's functi
 
 ## MDF (Module description file)
 
-The module description file can be downloaded from (here)[]
+The module description file can be downloaded from (here)[https://www.eurosource.se/w55rp20_fridgectrl01.xml]
 
