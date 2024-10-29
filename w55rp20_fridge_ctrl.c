@@ -147,7 +147,7 @@ message_arrived(MessageData *msg_data);
 
 /* Timer  */
 static void
-repeating_timer_callback(void);
+timer_callback(void);
 static time_t
 millis(void);
 
@@ -177,6 +177,19 @@ main()
     printf("Clean boot\n");
   }
 
+  // Init compressor pin
+  gpio_init(COMPRESSOR_RELAY_PIN);
+  gpio_set_dir(COMPRESSOR_RELAY_PIN, GPIO_OUT);
+  gpio_set_pulls(COMPRESSOR_RELAY_PIN,true, false);
+  gpio_put(COMPRESSOR_RELAY_PIN, false);
+
+  // Init NTC temperature sensor power pin
+  gpio_init(NTC_POWER_PIN);
+  gpio_set_pulls(NTC_POWER_PIN,true, false);
+  gpio_put(NTC_POWER_PIN, false);
+  gpio_set_dir(NTC_POWER_PIN, GPIO_OUT);
+  gpio_put(NTC_POWER_PIN, false);
+
   // Enable the watchdog,
   // second arg is pause on debug which means the watchdog will pause when stepping through code
   // watchdog_enable(1000, 1);
@@ -202,7 +215,7 @@ main()
   wizchip_check();
 
   // Create one millisecond callback
-  wizchip_1ms_timer_initialize(repeating_timer_callback);
+  wizchip_1ms_timer_initialize(timer_callback);
 
   // Initialize network
   network_initialize(g_net_info);
@@ -224,7 +237,7 @@ main()
   /* Initialize MQTT client */
   MQTTClientInit(&g_mqtt_client,
                  &g_mqtt_network,
-                 DEFAULT_TIMEOUT,
+                 DEFAULT_MQTT_TIMEOUT,
                  g_mqtt_send_buf,
                  ETHERNET_BUF_MAX_SIZE,
                  g_mqtt_recv_buf,
@@ -254,8 +267,8 @@ main()
   g_mqtt_message.qos        = QOS0;
   g_mqtt_message.retained   = 0;
   g_mqtt_message.dup        = 0;
-  g_mqtt_message.payload    = MQTT_PUBLISH_PAYLOAD;
-  g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
+  //g_mqtt_message.payload    = MQTT_PUBLISH_PAYLOAD;
+  //g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
 
   /* Subscribe */
   rv = MQTTSubscribe(&g_mqtt_client, g_mqtt_pub_topic_base, QOS0, message_arrived);
@@ -289,6 +302,16 @@ main()
     if (millis() > (fridge_temp_read_start_ms + FRIDGE_TEMPERATURE_INTERVAL)) {
       gdevcfg.temp_current      = readFridgeTemperature();
       fridge_temp_read_start_ms = millis();
+    }
+
+    // Control fridge compressor
+    if (gdevcfg.temp_current > (gdevcfg.temp_setpoint + gdevcfg.hysterersis)) {
+      // Turn on compressor
+      gpio_put(PICO_DEFAULT_LED_PIN, true);
+    }
+    else if (gdevcfg.temp_current < (gdevcfg.temp_setpoint)) {
+      // Turn off compressor
+      gpio_put(PICO_DEFAULT_LED_PIN, false);
     }
 
     // Heartbeat
@@ -351,7 +374,8 @@ main()
     }
 
     // Low temp alarm
-    if (gdevcfg.bAlarmOnLow && (gdevcfg.temp_current < gdevcfg.temp_alarm_low)) {
+    if (gdevcfg.bAlarmOnLow && !(gvscpcfg.m_alarm_status & ALARM_LOW_STATUS) &&
+        (gdevcfg.temp_current < gdevcfg.temp_alarm_low)) {
       vscpEventEx ex;
 
       // Set low alarm bit (reset by read of standard alarm register)
@@ -372,7 +396,8 @@ main()
     }
 
     // High temp alarm
-    if (gdevcfg.bAlarmOnHigh && (gdevcfg.temp_current < gdevcfg.temp_alarm_high)) {
+    if (gdevcfg.bAlarmOnHigh && !(gvscpcfg.m_alarm_status & ALARM_HIGH_STATUS) &&
+        (gdevcfg.temp_current > gdevcfg.temp_alarm_high)) {
       vscpEventEx ex;
 
       // Set high alarm bit (reset by read of standard alarm register)
@@ -433,11 +458,11 @@ message_arrived(MessageData *msg_data)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// repeating_timer_callback
+// timer_callback
 //
 
 static void
-repeating_timer_callback(void)
+timer_callback(void)
 {
   g_msec_cnt++;
   MilliTimer_Handler();
@@ -464,6 +489,10 @@ millis(void)
 static int16_t
 readFridgeTemperature(void)
 {
+  // Turn power on to NTC sensor
+  gpio_put(NTC_POWER_PIN, true);
+  sleep_ms(500);
+
   // Select ADC input (0 (GPIO26))
   adc_select_input(0);
 
@@ -479,10 +508,10 @@ readFridgeTemperature(void)
   // T = B / ln(r/Rinf)
   // Rinf = R0 e (-B/T0), R0=10K, T0 = 273.15 + 25 = 298.15
 
-  uint16_t B        = 3450;
+  //uint16_t B        = 3450;
   double calVoltage = 3.3;
 
-  double Rinf = 10000.0 * exp(B / -298.15);
+  double Rinf = 10000.0 * exp(gdevcfg.bCoefficient / -298.15);
 
   // V2 = adc * voltage/4096
   double v = calVoltage * (double) result / 4096;
@@ -491,26 +520,29 @@ readFridgeTemperature(void)
   double resistance = (10000.0 * (calVoltage - v)) / v;
 
   // itemp = r;
-  double temp = ((double) B) / log(resistance / Rinf);
+  double temp = ((double) gdevcfg.bCoefficient) / log(resistance / Rinf);
   // itemp = log(r/Rinf);
   temp -= 273.15; // Convert Kelvin to Celsius
 
-  // avarage = testadc;
+  // average = testadc;
   /*  https://learn.adafruit.com/thermistor/using-a-thermistor
-  avarage = (1023/avarage) - 1;
-  avarage = 10000 / avarage;      // Resistance of termistor
-  //temp = avarage/10000;           // (R/Ro)
-  temp = 10000/avarage;
-  temp = log(temp);               // ln(R/Ro)
+  average = (1023/average) - 1;
+  average = 10000 / average;      // Resistance of thermistor
+  //temp = average/10000;           // (R/Ro)
+  temp = 10000/average;
+  temp = log(tempaverage               // ln(R/Ro)
   temp /= B;                      // 1/B * ln(R/Ro)
   temp += 1.0 / (25 + 273.15);    // + (1/To)
   temp = 1.0 / temp;              // Invert
   temp -= 273.15;
   */
-  uint32_t current_temp = (long) (temp * 100);
-  // printf("Temperature: %f C\n", temp);
+  uint16_t current_temp = (long) (temp * 100);
+  printf("Temperature: %f C  %d\n", temp, current_temp);
 
-  return temp;
+  // Turn power of to the NTC sensor
+  gpio_put(NTC_POWER_PIN, false);
+
+  return current_temp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

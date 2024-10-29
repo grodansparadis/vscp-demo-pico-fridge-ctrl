@@ -36,13 +36,17 @@
 /* Port */
 #define PORT_MQTT 1883
 
+/* I/O Pins */
+#define COMPRESSOR_RELAY_PIN 22
+#define NTC_POWER_PIN        28
+
 /* Timeout */
-#define DEFAULT_TIMEOUT 1000 // 1 second
+#define DEFAULT_MQTT_TIMEOUT 1000 // 1 second
 
 /* Fridge temperature read interval (ms)*/
-#define FRIDGE_TEMPERATURE_INTERVAL 5000
+#define FRIDGE_TEMPERATURE_INTERVAL 1000
 
-/* Bits is alarmstatus for alarm notifcation */
+/* Bits is alarmstatus for alarm notification */
 #define ALARM_LOW_STATUS  1
 #define ALARM_HIGH_STATUS 2
 
@@ -50,10 +54,10 @@
 #define MQTT_CLIENT_ID       "w55rp20-fridge"
 #define MQTT_USERNAME        "vscp"
 #define MQTT_PASSWORD        "secret"
-#define MQTT_PUBLISH_TOPIC   "publish_topic"
-#define MQTT_PUBLISH_PAYLOAD "Hello, World!"
-#define MQTT_PUBLISH_PERIOD  (1000 * 10) // 10 seconds
-#define MQTT_SUBSCRIBE_TOPIC "subscribe_topic"
+//#define MQTT_PUBLISH_TOPIC   "publish_topic"
+//#define MQTT_PUBLISH_PAYLOAD "Hello, World!"
+//#define MQTT_PUBLISH_PERIOD  (1000 * 10) // 10 seconds
+//#define MQTT_SUBSCRIBE_TOPIC "subscribe_topic"
 #define MQTT_KEEP_ALIVE      60 // 60 milliseconds
 
 // VSCP
