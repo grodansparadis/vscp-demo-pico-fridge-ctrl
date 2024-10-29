@@ -180,12 +180,12 @@ main()
   // Init compressor pin
   gpio_init(COMPRESSOR_RELAY_PIN);
   gpio_set_dir(COMPRESSOR_RELAY_PIN, GPIO_OUT);
-  gpio_set_pulls(COMPRESSOR_RELAY_PIN,true, false);
+  gpio_set_pulls(COMPRESSOR_RELAY_PIN, true, false);
   gpio_put(COMPRESSOR_RELAY_PIN, false);
 
   // Init NTC temperature sensor power pin
   gpio_init(NTC_POWER_PIN);
-  gpio_set_pulls(NTC_POWER_PIN,true, false);
+  gpio_set_pulls(NTC_POWER_PIN, true, false);
   gpio_put(NTC_POWER_PIN, false);
   gpio_set_dir(NTC_POWER_PIN, GPIO_OUT);
   gpio_put(NTC_POWER_PIN, false);
@@ -264,11 +264,11 @@ main()
   printf(" MQTT connected\n");
 
   /* Configure publish message */
-  g_mqtt_message.qos        = QOS0;
-  g_mqtt_message.retained   = 0;
-  g_mqtt_message.dup        = 0;
-  //g_mqtt_message.payload    = MQTT_PUBLISH_PAYLOAD;
-  //g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
+  g_mqtt_message.qos      = QOS0;
+  g_mqtt_message.retained = 0;
+  g_mqtt_message.dup      = 0;
+  // g_mqtt_message.payload    = MQTT_PUBLISH_PAYLOAD;
+  // g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
 
   /* Subscribe */
   rv = MQTTSubscribe(&g_mqtt_client, g_mqtt_pub_topic_base, QOS0, message_arrived);
@@ -306,12 +306,49 @@ main()
 
     // Control fridge compressor
     if (gdevcfg.temp_current > (gdevcfg.temp_setpoint + gdevcfg.hysterersis)) {
-      // Turn on compressor
-      gpio_put(PICO_DEFAULT_LED_PIN, true);
+
+      vscpEventEx ex;
+      memset(&ex, 0, sizeof(ex));
+
+      if (!gpio_get(COMPRESSOR_RELAY_PIN)) {
+
+        // Turn on compressor
+        gpio_put(COMPRESSOR_RELAY_PIN, true);
+
+        ex.head = 0;
+        memcpy(ex.GUID, gvscpcfg.m_guid, 16);
+        ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
+        ex.vscp_class = VSCP_CLASS1_INFORMATION;
+        ex.vscp_type  = VSCP_TYPE_INFORMATION_ON;
+        ex.sizeData   = 3;
+        ex.data[0]    = 0; // Index
+        ex.data[1]    = gvscpcfg.m_zone;
+        ex.data[2]    = gvscpcfg.m_subzone;
+
+        vscp_frmw2_callback_send_event_ex(NULL, &ex);
+      }
     }
     else if (gdevcfg.temp_current < (gdevcfg.temp_setpoint)) {
-      // Turn off compressor
-      gpio_put(PICO_DEFAULT_LED_PIN, false);
+      vscpEventEx ex;
+      memset(&ex, 0, sizeof(ex));
+
+      if (gpio_get(COMPRESSOR_RELAY_PIN)) {
+
+        // Turn off compressor
+        gpio_put(COMPRESSOR_RELAY_PIN, false);
+
+        ex.head = 0;
+        memcpy(ex.GUID, gvscpcfg.m_guid, 16);
+        ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
+        ex.vscp_class = VSCP_CLASS1_INFORMATION;
+        ex.vscp_type  = VSCP_TYPE_INFORMATION_OFF;
+        ex.sizeData   = 3;
+        ex.data[0]    = 0; // Index
+        ex.data[1]    = gvscpcfg.m_zone;
+        ex.data[2]    = gvscpcfg.m_subzone;
+
+        vscp_frmw2_callback_send_event_ex(NULL, &ex);
+      }
     }
 
     // Heartbeat
@@ -332,14 +369,6 @@ main()
       ex.data[2]    = gvscpcfg.m_subzone;
 
       rv = vscp_frmw2_callback_send_event_ex(NULL, &ex);
-      // rv = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
-
-      // if (rv < 0) {
-      //   printf(" Publish failed : %d\n", rv);
-
-      //   // while (1)
-      //   //   ;
-      // }
 
       printf(" Published heartbeat\n");
       heart_beat_start_ms = millis();
@@ -349,11 +378,10 @@ main()
     if (gdevcfg.temp_report_period && (millis() > (periodic_start_ms + (gdevcfg.temp_report_period * 1000)))) {
 
       vscpEventEx ex;
+      memset(&ex, 0, sizeof(ex));
 
       // Set low alarm bit
       gvscpcfg.m_alarm_status |= 1;
-
-      memset(&ex, 0, sizeof(ex));
 
       printf("Temp: %d C\n", gdevcfg.temp_current);
 
@@ -377,11 +405,11 @@ main()
     if (gdevcfg.bAlarmOnLow && !(gvscpcfg.m_alarm_status & ALARM_LOW_STATUS) &&
         (gdevcfg.temp_current < gdevcfg.temp_alarm_low)) {
       vscpEventEx ex;
+      memset(&ex, 0, sizeof(ex));
 
       // Set low alarm bit (reset by read of standard alarm register)
       gvscpcfg.m_alarm_status |= ALARM_LOW_STATUS;
 
-      memset(&ex, 0, sizeof(ex));
       ex.head = 0;
       memcpy(ex.GUID, gvscpcfg.m_guid, 16);
       ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
@@ -452,9 +480,20 @@ set_clock_khz(void)
 static void
 message_arrived(MessageData *msg_data)
 {
-  MQTTMessage *message = msg_data->message;
+  int rv;
+  vscpEventEx ex;
+  memset(&ex, 0, sizeof(vscpEventEx));
 
-  printf("%.*s", (uint32_t) message->payloadlen, (uint8_t *) message->payload);
+  MQTTMessage *message = msg_data->message;
+  printf("MQTT message received: %.*s", (uint32_t) message->payloadlen, (uint8_t *) message->payload);
+
+  rv = vscp_fwhlp_parse_json_ex(&ex, message->payload);
+  if (VSCP_ERROR_SUCCESS != rv) {
+    printf("Failed to parse message %d", rv);
+    return;
+  }
+
+  printf("VSCP Class=%d, VSCP Type = %d", ex.vscp_class, ex.vscp_type);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -491,10 +530,11 @@ readFridgeTemperature(void)
 {
   // Turn power on to NTC sensor
   gpio_put(NTC_POWER_PIN, true);
-  sleep_ms(500);
 
   // Select ADC input (0 (GPIO26))
   adc_select_input(0);
+
+  sleep_ms(500);
 
   // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
   const float conversion_factor = 3.3f / (1 << 12);
@@ -508,7 +548,7 @@ readFridgeTemperature(void)
   // T = B / ln(r/Rinf)
   // Rinf = R0 e (-B/T0), R0=10K, T0 = 273.15 + 25 = 298.15
 
-  //uint16_t B        = 3450;
+  // uint16_t B        = 3450;
   double calVoltage = 3.3;
 
   double Rinf = 10000.0 * exp(gdevcfg.bCoefficient / -298.15);
@@ -718,16 +758,16 @@ vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
 {
   int rv;
   char buf[20];
-  char bufEvent[512];
+  char bufEvent[2048];
   char bufTopic[512];
-  /* Publish */
 
+  /* Publish */
   if (VSCP_ERROR_SUCCESS != (rv = vscp_fwhlp_create_json_ex(bufEvent, sizeof(bufEvent), pex))) {
     printf("Failed to create JSON event ex %d", rv);
     return rv;
   }
 
-  printf(buf);
+  printf("[%s]", bufEvent);
 
   /* Configure publish message */
   MQTTMessage mqtt_msg;
