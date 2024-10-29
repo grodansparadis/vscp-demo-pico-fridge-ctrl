@@ -326,6 +326,10 @@ main()
     if (gdevcfg.temp_report_period && (millis() > (periodic_start_ms + (gdevcfg.temp_report_period * 1000)))) {
 
       vscpEventEx ex;
+
+      // Set low alarm bit
+      gvscpcfg.m_alarm_status |= 1;
+
       memset(&ex, 0, sizeof(ex));
 
       printf("Temp: %d C\n", gdevcfg.temp_current);
@@ -336,14 +340,56 @@ main()
       ex.vscp_class = VSCP_CLASS1_MEASUREMENT;
       ex.vscp_type  = VSCP_TYPE_MEASUREMENT_TEMPERATURE;
       ex.sizeData   = 3;
-      ex.data[0] =
-        0b01101000; // Integer | Celsius | Sensor index = 0 ex.data[1] = (gdevcfg.temp_current >> 8) & 0xff; // MSB
-      ex.data[2] = gdevcfg.temp_current & 0xff; // LSB
+      ex.data[0]    = 0b01101000;                         // Integer | Celsius | Sensor index = 0
+      ex.data[1]    = (gdevcfg.temp_current >> 8) & 0xff; // MSB
+      ex.data[2]    = gdevcfg.temp_current & 0xff;        // LSB
 
       vscp_frmw2_callback_send_event_ex(NULL, &ex);
 
       printf(" Published temperature\n");
       periodic_start_ms = millis();
+    }
+
+    // Low temp alarm
+    if (gdevcfg.bAlarmOnLow && (gdevcfg.temp_current < gdevcfg.temp_alarm_low)) {
+      vscpEventEx ex;
+
+      // Set low alarm bit (reset by read of standard alarm register)
+      gvscpcfg.m_alarm_status |= ALARM_LOW_STATUS;
+
+      memset(&ex, 0, sizeof(ex));
+      ex.head = 0;
+      memcpy(ex.GUID, gvscpcfg.m_guid, 16);
+      ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
+      ex.vscp_class = VSCP_CLASS1_ALARM;
+      ex.vscp_type  = VSCP_TYPE_ALARM_ALARM;
+      ex.sizeData   = 3;
+      ex.data[0]    = gvscpcfg.m_alarm_status; // Alarm status (standard register 0x80)
+      ex.data[1]    = gdevcfg.zone;            // Zone
+      ex.data[2]    = gdevcfg.subzone;         // Subzone
+
+      vscp_frmw2_callback_send_event_ex(NULL, &ex);
+    }
+
+    // High temp alarm
+    if (gdevcfg.bAlarmOnHigh && (gdevcfg.temp_current < gdevcfg.temp_alarm_high)) {
+      vscpEventEx ex;
+
+      // Set high alarm bit (reset by read of standard alarm register)
+      gvscpcfg.m_alarm_status |= ALARM_HIGH_STATUS;
+
+      memset(&ex, 0, sizeof(ex));
+      ex.head = 0;
+      memcpy(ex.GUID, gvscpcfg.m_guid, 16);
+      ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
+      ex.vscp_class = VSCP_CLASS1_ALARM;
+      ex.vscp_type  = VSCP_TYPE_ALARM_ALARM;
+      ex.sizeData   = 3;
+      ex.data[0]    = gvscpcfg.m_alarm_status; // Alarm status (standard register 0x80)
+      ex.data[1]    = gdevcfg.zone;            // Zone
+      ex.data[2]    = gdevcfg.subzone;         // Subzone
+
+      vscp_frmw2_callback_send_event_ex(NULL, &ex);
     }
 
   } // loop
@@ -462,7 +508,7 @@ readFridgeTemperature(void)
   temp -= 273.15;
   */
   uint32_t current_temp = (long) (temp * 100);
-  //printf("Temperature: %f C\n", temp);
+  // printf("Temperature: %f C\n", temp);
 
   return temp;
 }

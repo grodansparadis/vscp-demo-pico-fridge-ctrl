@@ -42,6 +42,10 @@
 /* Fridge temperature read interval (ms)*/
 #define FRIDGE_TEMPERATURE_INTERVAL 5000
 
+/* Bits is alarmstatus for alarm notifcation */
+#define ALARM_LOW_STATUS  1
+#define ALARM_HIGH_STATUS 2
+
 /* MQTT */
 #define MQTT_CLIENT_ID       "w55rp20-fridge"
 #define MQTT_USERNAME        "vscp"
