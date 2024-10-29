@@ -29,6 +29,7 @@
 
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
+#include "hardware/watchdog.h"
 
 #include "port_common.h"
 
@@ -54,9 +55,63 @@ static wiz_NetInfo g_net_info = {
   .ip   = { 192, 168, 1, 200 },                   // IP address
   .sn   = { 255, 255, 255, 0 },                   // Subnet Mask
   .gw   = { 192, 168, 1, 1 },                     // Gateway
-  .dns  = { 8, 8, 8, 8 },                         // DNS server
+  .dns  = { 192, 168, 1, 1 },                     // DNS server
   .dhcp = NETINFO_STATIC                          // DHCP enable/disable
 };
+
+/* Fridge configuration parameters */
+fridgectrl_t gdevcfg = { .zone               = 0,
+                         .subzone            = 0,
+                         .bCoefficient       = 0xf68,
+                         .bActive            = true,
+                         .bAlarmOnLow        = true,
+                         .bAlarmOnHigh       = true,
+                         .temp_current       = 0,
+                         .temp_setpoint      = -20,
+                         .temp_alarm_low     = -25,
+                         .temp_alarm_high    = -10,
+                         .hysterersis        = 5,
+                         .temp_report_period = 60 };
+
+/* VSCP configuration parameters */
+vscp_frmw2_firmware_config_t gvscpcfg = { .m_level     = VSCP_LEVEL2,
+                                          .m_puserdata = (void *) &gdevcfg,
+
+                                          .m_probe_timeout       = VSCP_PROBE_TIMEOUT,
+                                          .m_probe_timeout_count = VSCP_PROBE_TIMEOUT_COUNT,
+
+                                          .m_interval_heartbeat = 30000,
+                                          .m_interval_caps      = 240000,
+
+                                          .m_pDm         = NULL, // Pointer to decision matrix storage (NULL if no DM).
+                                          .m_nDmRows     = 0,    // Number of DM rows (0 if no DM).
+                                          .m_sizeDmRow   = 0,    // Size for one DM row.
+                                          .m_regOffsetDm = 0,    // Register offset for DM (normally zero)
+                                          .m_pageDm      = 0,    // Register page where DM definition starts
+
+                                          .m_pInternalMdf = NULL, // No internal MDF
+
+                                          .m_bInterestedInAllEvents = true,
+                                          .m_pEventsOfInterest      = NULL, // All events
+
+                                          .m_guid[15] = 0xff, // Ethernet prefix
+                                          .m_guid[14] = 0xff,
+                                          .m_guid[13] = 0xff,
+                                          .m_guid[12] = 0xff,
+                                          .m_guid[11] = 0xff,
+                                          .m_guid[10] = 0xff,
+                                          .m_guid[9]  = 0xff,
+                                          .m_guid[8]  = 0xf3,
+
+                                          /*.m_guid[7] = g_net_info.mac[0],
+                                          .m_guid[6] = g_net_info.mac[1],
+                                          .m_guid[5] = g_net_info.mac[2],
+                                          .m_guid[4] = g_net_info.mac[3],
+                                          .m_guid[3] = g_net_info.mac[4],
+                                          .m_guid[2] = g_net_info.mac[5],
+                                          */
+                                          .m_guid[1] = 0x00,
+                                          .m_guid[0] = 0x01 };
 
 /*
   Topic is "vscp/GUID/class/type/index" and the base "vscp/GUID/"is set here. The topic base
@@ -64,7 +119,7 @@ static wiz_NetInfo g_net_info = {
     max: vscp/00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00/32767/65535/255 (length: 68)
   set to ethernet prefix + mac-addr (from g_net_info above) + 00:01
 */
-static char g_mqtt_pub_topic_base[55] = {"vscp/FF:FF:FF:FF:FF:FF:FF:FE:00:08:DC:12:34:56:00:01/"};
+static char g_mqtt_pub_topic_base[55] = { "vscp/FF:FF:FF:FF:FF:FF:FF:FE:00:08:DC:12:34:56:00:01/" };
 
 /* MQTT */
 static uint8_t g_mqtt_send_buf[ETHERNET_BUF_MAX_SIZE] = {
@@ -96,8 +151,8 @@ repeating_timer_callback(void);
 static time_t
 millis(void);
 
-/* Fridge control */
-static float
+/* Read fridge temperature */
+static int16_t
 readFridgeTemperature(void);
 
 static int
@@ -107,20 +162,31 @@ int
 main()
 {
   /* Initialize */
-  int32_t retval    = 0;
-  uint32_t start_ms = 0;
-  vscp_frmw2_firmware_config_t cfg;
-  int rv;
-
-  rv = init_vscp(&cfg);
-  rv = vscp_frmw2_init(&cfg);
+  int rv                             = 0;
+  uint32_t fridge_temp_read_start_ms = 0; // Interval for fridge temperature read
+  uint32_t heart_beat_start_ms       = 0; // Timer for heart beats
+  uint32_t periodic_start_ms         = 0; // Timer for periodic temperature events
 
   set_clock_khz();
   stdio_init_all();
 
-  printf("Initialized\n");
+  if (watchdog_caused_reboot()) {
+    printf("Rebooted by Watchdog!\n");
+  }
+  else {
+    printf("Clean boot\n");
+  }
+
+  // Enable the watchdog,
+  // second arg is pause on debug which means the watchdog will pause when stepping through code
+  // watchdog_enable(1000, 1);
 
   adc_init();
+
+  rv = init_vscp(&gvscpcfg);
+  rv = vscp_frmw2_init(&gvscpcfg);
+
+  printf("Initialized\n");
 
   // Make sure GPIO is high-impedance, no pullups etc
   adc_gpio_init(26);
@@ -135,8 +201,10 @@ main()
   wizchip_initialize();
   wizchip_check();
 
+  // Create one millisecond callback
   wizchip_1ms_timer_initialize(repeating_timer_callback);
 
+  // Initialize network
   network_initialize(g_net_info);
 
   /* Get network information */
@@ -144,9 +212,9 @@ main()
 
   NewNetwork(&g_mqtt_network, SOCKET_MQTT);
 
-  retval = ConnectNetwork(&g_mqtt_network, g_mqtt_broker_ip, PORT_MQTT);
+  rv = ConnectNetwork(&g_mqtt_network, g_mqtt_broker_ip, PORT_MQTT);
 
-  if (retval != 1) {
+  if (rv != 1) {
     printf(" Network connect failed\n");
 
     while (1)
@@ -171,10 +239,10 @@ main()
   g_mqtt_packet_connect_data.username.cstring  = MQTT_USERNAME;
   g_mqtt_packet_connect_data.password.cstring  = MQTT_PASSWORD;
 
-  retval = MQTTConnect(&g_mqtt_client, &g_mqtt_packet_connect_data);
+  rv = MQTTConnect(&g_mqtt_client, &g_mqtt_packet_connect_data);
 
-  if (retval < 0) {
-    printf(" MQTT connect failed : %d\n", retval);
+  if (rv < 0) {
+    printf(" MQTT connect failed : %d\n", rv);
 
     while (1)
       ;
@@ -190,10 +258,10 @@ main()
   g_mqtt_message.payloadlen = strlen(g_mqtt_message.payload);
 
   /* Subscribe */
-  retval = MQTTSubscribe(&g_mqtt_client, g_mqtt_pub_topic_base, QOS0, message_arrived);
+  rv = MQTTSubscribe(&g_mqtt_client, g_mqtt_pub_topic_base, QOS0, message_arrived);
 
-  if (retval < 0) {
-    printf(" Subscribe failed : %d\n", retval);
+  if (rv < 0) {
+    printf(" Subscribe failed : %d\n", rv);
 
     while (1)
       ;
@@ -201,56 +269,84 @@ main()
 
   printf(" Subscribed\n");
 
-  start_ms = millis();
+  heart_beat_start_ms       = 0; // millis() + gvscpcfg.m_interval_heartbeat*2;
+  periodic_start_ms         = millis();
+  fridge_temp_read_start_ms = millis();
 
   /* Work loop */
   while (1) {
 
-    if ((retval = MQTTYield(&g_mqtt_client, g_mqtt_packet_connect_data.keepAliveInterval)) < 0) {
-      printf(" Yield error : %d\n", retval);
+    // watchdog_update();
+
+    if ((rv = MQTTYield(&g_mqtt_client, g_mqtt_packet_connect_data.keepAliveInterval)) < 0) {
+      printf(" Yield error : %d\n", rv);
 
       while (1)
         ;
     }
 
-    // Heartbeat
-    if (millis() > (start_ms + cfg.m_interval_heartbeat)) {
+    // Temperature measurement
+    if (millis() > (fridge_temp_read_start_ms + FRIDGE_TEMPERATURE_INTERVAL)) {
+      gdevcfg.temp_current      = readFridgeTemperature();
+      fridge_temp_read_start_ms = millis();
+    }
 
-      // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
-      const float conversion_factor = 3.3f / (1 << 12);
-      uint16_t result               = adc_read();
-      // printf("Raw value: 0x%03x, voltage: %f V\n", result,
-      //        result * conversion_factor);
-      printf("Raw value: 0x%03x, voltage: %f V\n", result, readFridgeTemperature());
+    // Heartbeat
+    if (gvscpcfg.m_interval_heartbeat && (millis() > (heart_beat_start_ms + gvscpcfg.m_interval_heartbeat))) {
 
       /* Publish */
       vscpEventEx ex;
-      memset(&ex,0, sizeof(ex));
+      memset(&ex, 0, sizeof(ex));
 
       ex.head = 0;
-      memcpy(ex.GUID,cfg.m_guid,16);
-      ex.timestamp = vscp_frmw2_callback_get_timestamp(NULL);
+      memcpy(ex.GUID, gvscpcfg.m_guid, 16);
+      ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
       ex.vscp_class = VSCP_CLASS1_INFORMATION;
-      ex.vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
-      ex.sizeData = 3;
-      ex.data[0] = 0;
-      ex.data[1] = cfg.m_zone;
-      ex.data[2] = cfg.m_subzone;
+      ex.vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+      ex.sizeData   = 3;
+      ex.data[0]    = 0;
+      ex.data[1]    = gvscpcfg.m_zone;
+      ex.data[2]    = gvscpcfg.m_subzone;
 
-      retval = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
+      rv = vscp_frmw2_callback_send_event_ex(NULL, &ex);
+      // rv = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &g_mqtt_message);
 
-      if (retval < 0) {
-        printf(" Publish failed : %d\n", retval);
+      // if (rv < 0) {
+      //   printf(" Publish failed : %d\n", rv);
 
-        while (1)
-          ;
-      }
+      //   // while (1)
+      //   //   ;
+      // }
 
-      printf(" Published\n");
-
-      start_ms = millis();
+      printf(" Published heartbeat\n");
+      heart_beat_start_ms = millis();
     }
-  }
+
+    // Periodic temperature measurements
+    if (gdevcfg.temp_report_period && (millis() > (periodic_start_ms + (gdevcfg.temp_report_period * 1000)))) {
+
+      vscpEventEx ex;
+      memset(&ex, 0, sizeof(ex));
+
+      printf("Temp: %d C\n", gdevcfg.temp_current);
+
+      ex.head = 0;
+      memcpy(ex.GUID, gvscpcfg.m_guid, 16);
+      ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
+      ex.vscp_class = VSCP_CLASS1_MEASUREMENT;
+      ex.vscp_type  = VSCP_TYPE_MEASUREMENT_TEMPERATURE;
+      ex.sizeData   = 3;
+      ex.data[0] =
+        0b01101000; // Integer | Celsius | Sensor index = 0 ex.data[1] = (gdevcfg.temp_current >> 8) & 0xff; // MSB
+      ex.data[2] = gdevcfg.temp_current & 0xff; // LSB
+
+      vscp_frmw2_callback_send_event_ex(NULL, &ex);
+
+      printf(" Published temperature\n");
+      periodic_start_ms = millis();
+    }
+
+  } // loop
 }
 
 /**
@@ -298,7 +394,6 @@ static void
 repeating_timer_callback(void)
 {
   g_msec_cnt++;
-
   MilliTimer_Handler();
 }
 
@@ -320,7 +415,7 @@ millis(void)
 // readFridgeTemperature
 //
 
-static float
+static int16_t
 readFridgeTemperature(void)
 {
   // Select ADC input (0 (GPIO26))
@@ -367,7 +462,7 @@ readFridgeTemperature(void)
   temp -= 273.15;
   */
   uint32_t current_temp = (long) (temp * 100);
-  printf("Temperature: %f C\n", temp);
+  //printf("Temperature: %f C\n", temp);
 
   return temp;
 }
@@ -379,61 +474,64 @@ readFridgeTemperature(void)
 static int
 init_vscp(vscp_frmw2_firmware_config_t *pcfg)
 {
-  int rv;
+  if (NULL == pcfg) {
+    return VSCP_ERROR_INVALID_POINTER;
+  }
 
-  memset(pcfg, 0, sizeof(vscp_frmw2_firmware_config_t));
+  // memset(pcfg, 0, sizeof(vscp_frmw2_firmware_config_t));
 
-  pcfg->m_level     = VSCP_LEVEL2;
-  pcfg->m_puserdata = NULL;
+  // pcfg->m_level     = VSCP_LEVEL2;
+  // pcfg->m_puserdata = (void *) &gdevcfg;
 
-  pcfg->m_probe_timeout       = VSCP_PROBE_TIMEOUT;
-  pcfg->m_probe_timeout_count = VSCP_PROBE_TIMEOUT_COUNT;
+  // pcfg->m_probe_timeout       = VSCP_PROBE_TIMEOUT;
+  // pcfg->m_probe_timeout_count = VSCP_PROBE_TIMEOUT_COUNT;
 
-  pcfg->m_interval_heartbeat = 30000;
-  pcfg->m_interval_caps      = 240000;
+  // pcfg->m_interval_heartbeat = 30000;
+  // pcfg->m_interval_caps      = 240000;
 
-  pcfg->m_pDm         = NULL; // Pointer to decision matrix storage (NULL if no DM).
-  pcfg->m_nDmRows     = 0;    // Number of DM rows (0 if no DM).
-  pcfg->m_sizeDmRow   = 0;    // Size for one DM row.
-  pcfg->m_regOffsetDm = 0;    // Register offset for DM (normally zero)
-  pcfg->m_pageDm      = 0;    // Register page where DM definition starts
+  // pcfg->m_pDm         = NULL; // Pointer to decision matrix storage (NULL if no DM).
+  // pcfg->m_nDmRows     = 0;    // Number of DM rows (0 if no DM).
+  // pcfg->m_sizeDmRow   = 0;    // Size for one DM row.
+  // pcfg->m_regOffsetDm = 0;    // Register offset for DM (normally zero)
+  // pcfg->m_pageDm      = 0;    // Register page where DM definition starts
 
-  pcfg->m_pInternalMdf = NULL; // No internal MDF
+  // pcfg->m_pInternalMdf = NULL; // No internal MDF
 
-  pcfg->m_bInterestedInAllEvents = true;
-  pcfg->m_pEventsOfInterest      = NULL; // All events
+  // pcfg->m_bInterestedInAllEvents = true;
+  // pcfg->m_pEventsOfInterest      = NULL; // All events
 
-  pcfg->m_guid[15] = 0xff; // Ethernet prefix
-  pcfg->m_guid[14] = 0xff;
-  pcfg->m_guid[13] = 0xff;
-  pcfg->m_guid[12] = 0xff;
-  pcfg->m_guid[11] = 0xff;
-  pcfg->m_guid[10] = 0xff;
-  pcfg->m_guid[9]  = 0xff;
-  pcfg->m_guid[8]  = 0xf3;
+  pcfg->m_guid[0] = 0xff; // Ethernet prefix
+  pcfg->m_guid[1] = 0xff;
+  pcfg->m_guid[2] = 0xff;
+  pcfg->m_guid[3] = 0xff;
+  pcfg->m_guid[4] = 0xff;
+  pcfg->m_guid[5] = 0xff;
+  pcfg->m_guid[6] = 0xff;
+  pcfg->m_guid[7] = 0xfe;
 
-  pcfg->m_guid[7] = g_net_info.mac[0];
-  pcfg->m_guid[6] = g_net_info.mac[1];
-  pcfg->m_guid[5] = g_net_info.mac[2];
-  pcfg->m_guid[4] = g_net_info.mac[3];
-  pcfg->m_guid[3] = g_net_info.mac[4];
-  pcfg->m_guid[2] = g_net_info.mac[5];
-  pcfg->m_guid[1] = 0x00;
-  pcfg->m_guid[0] = 0x01;
+  pcfg->m_guid[8]  = g_net_info.mac[0];
+  pcfg->m_guid[9]  = g_net_info.mac[1];
+  pcfg->m_guid[10] = g_net_info.mac[2];
+  pcfg->m_guid[11] = g_net_info.mac[3];
+  pcfg->m_guid[12] = g_net_info.mac[4];
+  pcfg->m_guid[13] = g_net_info.mac[5];
+  pcfg->m_guid[14] = 0x00;
+  pcfg->m_guid[15] = 0x01;
 
   // Set MDF url
   strncpy(pcfg->m_mdfurl, MDF_URL, 32);
 
   // Create MQTT subscribe/publishing base
-  sprintf(g_mqtt_pub_topic_base, 
-            "vscp/FF:FF:FF:FF:FF:FF:FF:FE:%02X:%02X:%02X:%02X:%02X:%02X:00:01",
-            g_net_info.mac[0],
-            g_net_info.mac[1],
-            g_net_info.mac[2],
-            g_net_info.mac[3],
-            g_net_info.mac[4],
-            g_net_info.mac[5]);
-  return rv;
+  sprintf(g_mqtt_pub_topic_base,
+          "vscp/FF:FF:FF:FF:FF:FF:FF:FE:%02X:%02X:%02X:%02X:%02X:%02X:00:01",
+          g_net_info.mac[0],
+          g_net_info.mac[1],
+          g_net_info.mac[2],
+          g_net_info.mac[3],
+          g_net_info.mac[4],
+          g_net_info.mac[5]);
+
+  return VSCP_ERROR_SUCCESS;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -486,9 +584,21 @@ vscp_frmw2_callback_report_events_of_interest(void *const puserdata)
 int
 vscp_frmw2_callback_set_event_time(void *const puserdata, vscpEventEx *const pex)
 {
-  int rv;
+  // Check event pointer
+  if (NULL == pex) {
+    return VSCP_ERROR_INVALID_POINTER;
+  }
 
-  return rv;
+  // We have no realtime clock on this device so we set the time fields
+  // to zero to let the receiving end timestamp
+  pex->year   = 0;
+  pex->month  = 0;
+  pex->day    = 0;
+  pex->hour   = 0;
+  pex->minute = 0;
+  pex->second = 0;
+
+  return VSCP_ERROR_SUCCESS;
 }
 
 int
@@ -529,38 +639,35 @@ int
 vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
 {
   int rv;
-  char buf[512];
+  char buf[20];
+  char bufEvent[512];
+  char bufTopic[512];
   /* Publish */
-      // vscpEventEx ex;
-      // memset(&ex,0, sizeof(ex));
 
-      // ex.head = 0;
-      // memcpy(ex.GUID,cfg.m_guid,16);
-      // ex.timestamp = vscp_frmw2_callback_get_timestamp(NULL);
-      // ex.vscp_class = VSCP_CLASS1_INFORMATION;
-      // ex.vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
-      // ex.sizeData = 3;
-      // ex.data[0] = 0;
-      // ex.data[1] = cfg.m_zone;
-      // ex.data[2] = cfg.m_subzone;
+  if (VSCP_ERROR_SUCCESS != (rv = vscp_fwhlp_create_json_ex(bufEvent, sizeof(bufEvent), pex))) {
+    printf("Failed to create JSON event ex %d", rv);
+    return rv;
+  }
 
-      if (VSCP_ERROR_SUCCESS != (rv =  vscp_fwhlp_create_json_ex(buf, sizeof(buf), pex))) {
-        printf("Failed to create JSON event ex %d", rv);
-        return rv;
-      }
+  printf(buf);
 
-      /* Configure publish message */
-      MQTTMessage mqtt_msg;
-      mqtt_msg.qos        = QOS0;
-      mqtt_msg.retained   = 0;
-      mqtt_msg.dup        = 0;
-      mqtt_msg.payload    = buf;
-      mqtt_msg.payloadlen = strlen(g_mqtt_message.payload);
+  /* Configure publish message */
+  MQTTMessage mqtt_msg;
+  mqtt_msg.qos        = QOS0;
+  mqtt_msg.retained   = 0;
+  mqtt_msg.dup        = 0;
+  mqtt_msg.payload    = bufEvent;
+  mqtt_msg.payloadlen = strlen(bufEvent);
 
-      if ((rv = MQTTPublish(&g_mqtt_client, MQTT_PUBLISH_TOPIC, &mqtt_msg)) < 0) {
-        printf(" Publish failed : %d\n", rv);
-        return VSCP_ERROR_WRITE_ERROR;
-      }
+  /* Topic*/
+  sprintf(buf, "/%d/%d/%d", pex->vscp_class, pex->vscp_type, pex->sizeData ? pex->data[0] & 3 : 0);
+  strcpy(bufTopic, g_mqtt_pub_topic_base);
+  strcat(bufTopic, buf);
+
+  if ((rv = MQTTPublish(&g_mqtt_client, bufTopic, &mqtt_msg)) < 0) {
+    printf(" Publish failed : %d\n", rv);
+    return VSCP_ERROR_WRITE_ERROR;
+  }
 
   return rv;
 }
@@ -576,4 +683,5 @@ vscp_frmw2_callback_stdreg_change(void *const puserdata, uint32_t stdreg)
 void
 vscp_frmw2_callback_feed_watchdog(void *const puserdata)
 {
+  watchdog_update();
 }

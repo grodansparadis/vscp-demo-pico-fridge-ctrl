@@ -39,42 +39,45 @@
 /* Timeout */
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
+/* Fridge temperature read interval (ms)*/
+#define FRIDGE_TEMPERATURE_INTERVAL 5000
+
 /* MQTT */
-#define MQTT_CLIENT_ID "w55rp20-fridge"
-#define MQTT_USERNAME "vscp"
-#define MQTT_PASSWORD "secret"
-#define MQTT_PUBLISH_TOPIC "publish_topic"
+#define MQTT_CLIENT_ID       "w55rp20-fridge"
+#define MQTT_USERNAME        "vscp"
+#define MQTT_PASSWORD        "secret"
+#define MQTT_PUBLISH_TOPIC   "publish_topic"
 #define MQTT_PUBLISH_PAYLOAD "Hello, World!"
-#define MQTT_PUBLISH_PERIOD (1000 * 10) // 10 seconds
+#define MQTT_PUBLISH_PERIOD  (1000 * 10) // 10 seconds
 #define MQTT_SUBSCRIBE_TOPIC "subscribe_topic"
-#define MQTT_KEEP_ALIVE 60 // 60 milliseconds
+#define MQTT_KEEP_ALIVE      60 // 60 milliseconds
 
 // VSCP
 #define MDF_URL "w55rp20_fridgectrl01.mdf"
 
 // *** Defaults ***
-#define DEFAULT_ZONE 0
+#define DEFAULT_ZONE    0
 #define DEFAULT_SUBZONE 0
 
 // NTC
-#define DEFAULT_NTC_COEFFICIENT 3450
+#define DEFAULT_NTC_COEFFICIENT      3450
 #define DEFAULT_TEMP_REPORT_INTERVAL 60
-#define DEFAULT_TEMP_HYSTERESIS 5
-#define DEFAULT_TEMP_LOW_ALARM -25
-#define DEFAULT_TEMP_HIGH_ALARM -10
-#define DEFAULT_TEMP_SET -20
+#define DEFAULT_TEMP_HYSTERESIS      5
+#define DEFAULT_TEMP_LOW_ALARM       -25
+#define DEFAULT_TEMP_HIGH_ALARM      -10
+#define DEFAULT_TEMP_SET             -20
 
 typedef struct fridgectrl {
   uint8_t zone;
   uint8_t subzone;
   uint16_t bCoefficient;
-  bool bActive; /* True if unit is active */
-  bool bAlarmOnLow; /* True if unit sends alarm on low temperature */
-  bool bAlarmOnHigh; /* True if unit sends alarm on high temperature */
-  double temp_current;    /* Current temperature */
-  double temp_setpoint;   /* Setpoint temperature */
-  double temp_alarm_low;  /* Low temperature alarm limit */
-  double temp_alarm_high; /* High temperature alarm limit */
+  bool bActive;            /* True if unit is active */
+  bool bAlarmOnLow;        /* True if unit sends alarm on low temperature */
+  bool bAlarmOnHigh;       /* True if unit sends alarm on high temperature */
+  int16_t temp_current;    /* Current temperature */
+  int16_t temp_setpoint;   /* Setpoint temperature */
+  int16_t temp_alarm_low;  /* Low temperature alarm limit */
+  int16_t temp_alarm_high; /* High temperature alarm limit */
   uint8_t hysterersis;
   uint8_t temp_report_period; /* Interval in seconds for temp reports. Zero
                                     is off */

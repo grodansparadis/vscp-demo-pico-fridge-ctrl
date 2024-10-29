@@ -66,7 +66,7 @@ As all VSCP devices the fridge controller have register that defines it's functi
 
 ## Events
 
-  * Temperature - class=1040/type=6
+  * Temperature - class=10/type=6
   * Alarm - class=1/type=2
 
 ## MDF (Module description file)
