@@ -52,7 +52,7 @@
 /* Network */
 static wiz_NetInfo g_net_info = {
   .mac  = { 0x00, 0x08, 0xDC, 0x12, 0x34, 0x56 }, // MAC address
-  .ip   = { 192, 168, 1, 200 },                   // IP address
+  .ip   = { 192, 168, 1, 243 },                   // IP address
   .sn   = { 255, 255, 255, 0 },                   // Subnet Mask
   .gw   = { 192, 168, 1, 1 },                     // Gateway
   .dns  = { 192, 168, 1, 1 },                     // DNS server
@@ -119,7 +119,7 @@ vscp_frmw2_firmware_config_t gvscpcfg = { .m_level     = VSCP_LEVEL2,
     max: vscp/00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00/32767/65535/255 (length: 68)
   set to ethernet prefix + mac-addr (from g_net_info above) + 00:01
 */
-static char g_mqtt_pub_topic_base[55] = { "vscp/FF:FF:FF:FF:FF:FF:FF:FE:00:08:DC:12:34:56:00:01/" };
+static char g_mqtt_pub_topic_base[55] = { "vscp/FF:FF:FF:FF:FF:FF:FF:FE:00:08:DC:12:34:56:00:01" };
 
 /* MQTT */
 static uint8_t g_mqtt_send_buf[ETHERNET_BUF_MAX_SIZE] = {
@@ -280,7 +280,7 @@ main()
       ;
   }
 
-  printf(" Subscribed\n");
+  printf(" Subscribed to topic %s\n", g_mqtt_pub_topic_base);
 
   heart_beat_start_ms       = 0; // millis() + gvscpcfg.m_interval_heartbeat*2;
   periodic_start_ms         = millis();
@@ -298,6 +298,8 @@ main()
         ;
     }
 
+    rv = vscp_frmw2_work(NULL);
+
     // Temperature measurement
     if (millis() > (fridge_temp_read_start_ms + FRIDGE_TEMPERATURE_INTERVAL)) {
       gdevcfg.temp_current      = readFridgeTemperature();
@@ -305,7 +307,7 @@ main()
     }
 
     // Control fridge compressor
-    if (gdevcfg.temp_current > (gdevcfg.temp_setpoint + gdevcfg.hysterersis)) {
+    /* if (gdevcfg.temp_current > (gdevcfg.temp_setpoint + gdevcfg.hysterersis)) {
 
       vscpEventEx ex;
       memset(&ex, 0, sizeof(ex));
@@ -349,7 +351,7 @@ main()
 
         vscp_frmw2_callback_send_event_ex(NULL, &ex);
       }
-    }
+    } */
 
     // Heartbeat
     if (gvscpcfg.m_interval_heartbeat && (millis() > (heart_beat_start_ms + gvscpcfg.m_interval_heartbeat))) {
@@ -368,9 +370,9 @@ main()
       ex.data[1]    = gvscpcfg.m_zone;
       ex.data[2]    = gvscpcfg.m_subzone;
 
-      rv = vscp_frmw2_callback_send_event_ex(NULL, &ex);
+      // rv = vscp_frmw2_callback_send_event_ex(NULL, &ex);
 
-      printf(" Published heartbeat\n");
+      // printf(" Published heartbeat\n");
       heart_beat_start_ms = millis();
     }
 
@@ -485,7 +487,7 @@ message_arrived(MessageData *msg_data)
   memset(&ex, 0, sizeof(vscpEventEx));
 
   MQTTMessage *message = msg_data->message;
-  printf("MQTT message received: %.*s", (uint32_t) message->payloadlen, (uint8_t *) message->payload);
+  printf("MQTT message received: %.*s \n", (uint32_t) message->payloadlen, (uint8_t *) message->payload);
 
   rv = vscp_fwhlp_parse_json_ex(&ex, message->payload);
   if (VSCP_ERROR_SUCCESS != rv) {
@@ -493,7 +495,12 @@ message_arrived(MessageData *msg_data)
     return;
   }
 
-  printf("VSCP Class=%d, VSCP Type = %d", ex.vscp_class, ex.vscp_type);
+  printf("VSCP Class=%d, VSCP Type = %d\n", ex.vscp_class, ex.vscp_type);
+
+  rv = vscp_frmw2_work(&ex);
+  if (VSCP_ERROR_SUCCESS != rv) {
+    printf("Failed to send event to protocol woork loop. %d", rv);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -743,6 +750,13 @@ vscp_frmw2_callback_get_ip_addr(void *const puserdata, uint8_t *pipaddr, uint8_t
 int
 vscp_frmw2_callback_read_reg(void *const puserdata, uint16_t page, uint32_t reg, uint8_t *pval)
 {
+  printf("Read VSCP register...\n");
+  switch (reg) {
+    case 0:
+      break;  
+  }
+
+  return VSCP_ERROR_SUCCESS;
 }
 
 int
@@ -759,7 +773,7 @@ vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
   int rv;
   char buf[20];
   char bufEvent[2048];
-  char bufTopic[512];
+  char bufTopic[2048];
 
   /* Publish */
   if (VSCP_ERROR_SUCCESS != (rv = vscp_fwhlp_create_json_ex(bufEvent, sizeof(bufEvent), pex))) {
@@ -767,7 +781,7 @@ vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
     return rv;
   }
 
-  printf("[%s]", bufEvent);
+  // printf("[%s]", bufEvent);
 
   /* Configure publish message */
   MQTTMessage mqtt_msg;

@@ -44,7 +44,7 @@
 #define DEFAULT_MQTT_TIMEOUT 1000 // 1 second
 
 /* Fridge temperature read interval (ms)*/
-#define FRIDGE_TEMPERATURE_INTERVAL 1000
+#define FRIDGE_TEMPERATURE_INTERVAL 20000
 
 /* Bits is alarmstatus for alarm notification */
 #define ALARM_LOW_STATUS  1
@@ -61,7 +61,7 @@
 #define MQTT_KEEP_ALIVE      60 // 60 milliseconds
 
 // VSCP
-#define MDF_URL "w55rp20_fridgectrl01.mdf"
+#define MDF_URL "w55rp20_fridgectrl01.xml"
 
 // *** Defaults ***
 #define DEFAULT_ZONE    0
