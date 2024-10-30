@@ -30,6 +30,7 @@
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 #include "hardware/watchdog.h"
+#include "pico/bootrom.h"
 
 #include "port_common.h"
 
@@ -675,7 +676,8 @@ vscp_frmw2_callback_get_timestamp(void *const puserdata)
 void
 vscp_frmw2_callback_enter_bootloader(void *const puserdata)
 {
-  // No bootloader, we do nothing
+  // Enter bootloader mode
+  reset_usb_boot(0, 0);
 }
 
 int
@@ -691,17 +693,15 @@ vscp_frmw2_callback_dm_action(void *const puserdata,
 int
 vscp_frmw2_callback_segment_ctrl_heartbeat(void *const puserdata, uint16_t segcrc, uint32_t time)
 {
-  int rv;
-
-  return rv;
+  // We are not interested in a received segment controller heartbeat
+  return VSCP_ERROR_SUCCESS;
 }
 
 int
 vscp_frmw2_callback_report_events_of_interest(void *const puserdata)
 {
-  int rv;
-
-  return rv;
+  // m_bInterestedInAllEvents is true, we are interested in all events
+  return VSCP_ERROR_SUCCESS;
 }
 
 int
@@ -727,22 +727,40 @@ vscp_frmw2_callback_set_event_time(void *const puserdata, vscpEventEx *const pex
 int
 vscp_frmw2_callback_restore_defaults(void *const puserdata)
 {
-  int rv;
+  gdevcfg.bCoefficient        = 0xf68;
+  gdevcfg.bActive            = true;
+  gdevcfg.bAlarmOnLow        = true;
+  gdevcfg.bAlarmOnHigh       = true;
+  gdevcfg.temp_current       = 0;
+  gdevcfg.temp_setpoint      = -20;
+  gdevcfg.temp_alarm_low     = -25;
+  gdevcfg.temp_alarm_high    = -10;
+  gdevcfg.hysteresis         = 5;
+  gdevcfg.temp_report_period = 60;
 
-  return rv;
+  return VSCP_ERROR_SUCCESS;
 }
 
 void
 vscp_frmw2_callback_reset(void *const puserdata)
 {
+  while (1)
+    ;
 }
 
 int
 vscp_frmw2_callback_get_ip_addr(void *const puserdata, uint8_t *pipaddr, uint8_t size)
 {
-  int rv;
+  // Check pointer
+  if (NULL == pipaddr) {
+    return VSCP_ERROR_INVALID_POINTER;
+  }
 
-  return rv;
+  // Only ip.v4 addr.
+  memset(pipaddr, 0, size);
+  memcpy(pipaddr, g_net_info.ip, 4);
+
+  return VSCP_ERROR_SUCCESS;
 }
 
 int
@@ -874,28 +892,27 @@ vscp_frmw2_callback_write_reg(void *const puserdata, uint16_t page, uint32_t reg
       break;
 
     case FRIDGE_REG_B_MSB:
-      gdevcfg.bCoefficient = (
-        (uint16_t)val << 8) + gdevcfg.bCoefficient;
+      gdevcfg.bCoefficient = ((uint16_t) val << 8) + gdevcfg.bCoefficient;
       break;
 
     case FRIDGE_REG_B_LSB:
-      gdevcfg.bCoefficient =  (gdevcfg.bCoefficient &  0xff00) + val;
+      gdevcfg.bCoefficient = (gdevcfg.bCoefficient & 0xff00) + val;
       break;
 
     case FRIDGE_REG_LOW_ALARM_MSB:
-      gdevcfg.temp_alarm_low = ((uint16_t)val << 8) + gdevcfg.temp_alarm_low;
+      gdevcfg.temp_alarm_low = ((uint16_t) val << 8) + gdevcfg.temp_alarm_low;
       break;
 
     case FRIDGE_REG_LOW_ALARM_LSB:
-      gdevcfg.temp_alarm_low =  (gdevcfg.temp_alarm_low &  0xff00) + val;
+      gdevcfg.temp_alarm_low = (gdevcfg.temp_alarm_low & 0xff00) + val;
       break;
 
     case FRIDGE_REG_HIGH_ALARM_MSB:
-      gdevcfg.temp_alarm_high = ((uint16_t)val << 8) + gdevcfg.temp_alarm_high;
+      gdevcfg.temp_alarm_high = ((uint16_t) val << 8) + gdevcfg.temp_alarm_high;
       break;
 
     case FRIDGE_REG_HIGH_ALARM_LSB:
-      gdevcfg.temp_alarm_high =  (gdevcfg.bCoefficient &  0xff00) + val;
+      gdevcfg.temp_alarm_high = (gdevcfg.bCoefficient & 0xff00) + val;
       break;
 
     case FRIDGE_REG_HYSTERESIS:
@@ -943,15 +960,13 @@ vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
     return VSCP_ERROR_WRITE_ERROR;
   }
 
-  return rv;
+  return VSCP_ERROR_SUCCESS;
 }
 
 int
 vscp_frmw2_callback_stdreg_change(void *const puserdata, uint32_t stdreg)
 {
-  int rv;
-
-  return rv;
+  return VSCP_ERROR_SUCCESS;
 }
 
 void
