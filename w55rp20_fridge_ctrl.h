@@ -51,17 +51,17 @@
 #define ALARM_HIGH_STATUS 2
 
 /* MQTT */
-#define MQTT_CLIENT_ID       "w55rp20-fridge"
-#define MQTT_USERNAME        "vscp"
-#define MQTT_PASSWORD        "secret"
-//#define MQTT_PUBLISH_TOPIC   "publish_topic"
-//#define MQTT_PUBLISH_PAYLOAD "Hello, World!"
-//#define MQTT_PUBLISH_PERIOD  (1000 * 10) // 10 seconds
-//#define MQTT_SUBSCRIBE_TOPIC "subscribe_topic"
-#define MQTT_KEEP_ALIVE      60 // 60 milliseconds
+#define MQTT_CLIENT_ID "w55rp20-fridge"
+#define MQTT_USERNAME  "vscp"
+#define MQTT_PASSWORD  "secret"
+// #define MQTT_PUBLISH_TOPIC   "publish_topic"
+// #define MQTT_PUBLISH_PAYLOAD "Hello, World!"
+// #define MQTT_PUBLISH_PERIOD  (1000 * 10) // 10 seconds
+// #define MQTT_SUBSCRIBE_TOPIC "subscribe_topic"
+#define MQTT_KEEP_ALIVE 60 // 60 milliseconds
 
 // VSCP
-#define MDF_URL "w55rp20_fridgectrl01.xml"
+#define MDF_URL "eurosource.se/w55rp20_frc01.xml"
 
 // *** Defaults ***
 #define DEFAULT_ZONE    0
