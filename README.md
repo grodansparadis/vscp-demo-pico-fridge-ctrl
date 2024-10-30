@@ -47,14 +47,12 @@ As all VSCP devices the fridge controller have register that defines it's functi
 | 6 | Current fridge temperature * 100 LSB |
 | 7 | B coefficient MSB Default: |
 | 8 | B coefficient LSB |
-| 9 | Current temperature * 100 signed MSB |
-| 10 | Current fridge temperature * 100 signed LSB |
-| 11 | Low alarm temperature * 100 int16 MSB |
-| 12 | Low alarm temperature * 100 int16 LSB |
-| 13 | High alarm temperature * 100 int16 MSB |
-| 14 | High alarm temperature * 100 int16 LSB |
-| 15 | Hysteresis, uint8 |
-| 16 | Settemp, int8 |
+| 9 | Low alarm temperature * 100 int16 MSB |
+| 10 | Low alarm temperature * 100 int16 LSB |
+| 11 | High alarm temperature * 100 int16 MSB |
+| 12 | High alarm temperature * 100 int16 LSB |
+| 13 | Hysteresis, uint8 |
+| 14 | Settemp, int8 |
 
 
 ## Remote variables
