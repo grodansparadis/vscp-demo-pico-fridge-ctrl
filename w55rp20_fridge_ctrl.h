@@ -63,6 +63,23 @@
 // VSCP
 #define MDF_URL "eurosource.se/w55rp20_frc01.xml"
 
+/* Registers */
+#define FRIDGE_REG_ZONE              0
+#define FRIDGE_REG_SUBZONE           1
+#define FRIDGE_REG_STATUS            2
+#define FRIDGE_REG_CONFIG            3
+#define FRIDGE_REG_TEMP_EVENT_PERIOD 4
+#define FRIDGE_REG_TEMP_MSB          5
+#define FRIDGE_REG_TEMP_LSB          6
+#define FRIDGE_REG_B_MSB             7
+#define FRIDGE_REG_B_LSB             8
+#define FRIDGE_REG_LOW_ALARM_MSB     9
+#define FRIDGE_REG_LOW_ALARM_LSB     10
+#define FRIDGE_REG_HIGH_ALARM_MSB    11
+#define FRIDGE_REG_HIGH_ALARM_LSB    12
+#define FRIDGE_REG_HYSTERESIS        13
+#define FRIDGE_REG_SETTEMP           14
+
 // *** Defaults ***
 #define DEFAULT_ZONE    0
 #define DEFAULT_SUBZONE 0
@@ -76,17 +93,15 @@
 #define DEFAULT_TEMP_SET             -20
 
 typedef struct fridgectrl {
-  uint8_t zone;
-  uint8_t subzone;
   uint16_t bCoefficient;
   bool bActive;            /* True if unit is active */
   bool bAlarmOnLow;        /* True if unit sends alarm on low temperature */
   bool bAlarmOnHigh;       /* True if unit sends alarm on high temperature */
   int16_t temp_current;    /* Current temperature */
-  int16_t temp_setpoint;   /* Setpoint temperature */
+  int8_t temp_setpoint;    /* Setpoint temperature */
   int16_t temp_alarm_low;  /* Low temperature alarm limit */
   int16_t temp_alarm_high; /* High temperature alarm limit */
-  uint8_t hysterersis;
+  uint8_t hysteresis;
   uint8_t temp_report_period; /* Interval in seconds for temp reports. Zero
                                     is off */
 } fridgectrl_t;

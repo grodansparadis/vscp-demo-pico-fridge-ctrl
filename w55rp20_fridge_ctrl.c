@@ -60,9 +60,7 @@ static wiz_NetInfo g_net_info = {
 };
 
 /* Fridge configuration parameters */
-fridgectrl_t gdevcfg = { .zone               = 0,
-                         .subzone            = 0,
-                         .bCoefficient       = 0xf68,
+fridgectrl_t gdevcfg = { .bCoefficient       = 0xf68,
                          .bActive            = true,
                          .bAlarmOnLow        = true,
                          .bAlarmOnHigh       = true,
@@ -70,7 +68,7 @@ fridgectrl_t gdevcfg = { .zone               = 0,
                          .temp_setpoint      = -20,
                          .temp_alarm_low     = -25,
                          .temp_alarm_high    = -10,
-                         .hysterersis        = 5,
+                         .hysteresis         = 5,
                          .temp_report_period = 60 };
 
 /* VSCP configuration parameters */
@@ -419,8 +417,8 @@ main()
       ex.vscp_type  = VSCP_TYPE_ALARM_ALARM;
       ex.sizeData   = 3;
       ex.data[0]    = gvscpcfg.m_alarm_status; // Alarm status (standard register 0x80)
-      ex.data[1]    = gdevcfg.zone;            // Zone
-      ex.data[2]    = gdevcfg.subzone;         // Subzone
+      ex.data[1]    = gvscpcfg.m_zone;         // Zone
+      ex.data[2]    = gvscpcfg.m_subzone;      // Subzone
 
       vscp_frmw2_callback_send_event_ex(NULL, &ex);
     }
@@ -441,8 +439,8 @@ main()
       ex.vscp_type  = VSCP_TYPE_ALARM_ALARM;
       ex.sizeData   = 3;
       ex.data[0]    = gvscpcfg.m_alarm_status; // Alarm status (standard register 0x80)
-      ex.data[1]    = gdevcfg.zone;            // Zone
-      ex.data[2]    = gdevcfg.subzone;         // Subzone
+      ex.data[1]    = gvscpcfg.m_zone;         // Zone
+      ex.data[2]    = gvscpcfg.m_subzone;      // Subzone
 
       vscp_frmw2_callback_send_event_ex(NULL, &ex);
     }
@@ -752,8 +750,70 @@ vscp_frmw2_callback_read_reg(void *const puserdata, uint16_t page, uint32_t reg,
 {
   printf("Read VSCP register...\n");
   switch (reg) {
-    case 0:
-      break;  
+
+    case FRIDGE_REG_ZONE:
+      *pval = gvscpcfg.m_zone;
+      break;
+
+    case FRIDGE_REG_SUBZONE:
+      *pval = gvscpcfg.m_subzone;
+      break;
+
+    case FRIDGE_REG_STATUS:
+      *pval = gpio_get(COMPRESSOR_RELAY_PIN) ? 0x80 : 0x00;
+      break;
+
+    case FRIDGE_REG_CONFIG:
+      *pval = 0;
+      *pval |= gdevcfg.bActive ? 0x80 : 0;
+      *pval |= gdevcfg.bAlarmOnLow ? 0x02 : 0;
+      *pval |= gdevcfg.bAlarmOnHigh ? 0x01 : 0;
+      break;
+
+    case FRIDGE_REG_TEMP_EVENT_PERIOD:
+      *pval = gdevcfg.temp_report_period;
+      break;
+
+    case FRIDGE_REG_TEMP_MSB:
+      *pval = (gdevcfg.temp_current >> 8) & 0xff;
+      break;
+
+    case FRIDGE_REG_TEMP_LSB:
+      *pval = gdevcfg.temp_current & 0xff;
+      break;
+
+    case FRIDGE_REG_B_MSB:
+      *pval = (gdevcfg.temp_current >> 8) & 0xff;
+      ;
+      break;
+
+    case FRIDGE_REG_B_LSB:
+      *pval = gdevcfg.temp_current & 0xff;
+      break;
+
+    case FRIDGE_REG_LOW_ALARM_MSB:
+      *pval = (gdevcfg.temp_alarm_low >> 8) & 0xff;
+      break;
+
+    case FRIDGE_REG_LOW_ALARM_LSB:
+      *pval = gdevcfg.temp_alarm_low & 0xff;
+      break;
+
+    case FRIDGE_REG_HIGH_ALARM_MSB:
+      *pval = (gdevcfg.temp_alarm_high >> 8) & 0xff;
+      break;
+
+    case FRIDGE_REG_HIGH_ALARM_LSB:
+      *pval = gdevcfg.temp_alarm_high & 0xff;
+      break;
+
+    case FRIDGE_REG_HYSTERESIS:
+      *pval = gdevcfg.hysteresis;
+      break;
+
+    case FRIDGE_REG_SETTEMP:
+      *pval = gdevcfg.temp_setpoint;
+      break;
   }
 
   return VSCP_ERROR_SUCCESS;
