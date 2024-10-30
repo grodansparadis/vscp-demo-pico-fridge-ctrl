@@ -37,7 +37,7 @@
 #define PORT_MQTT 1883
 
 /* I/O Pins */
-#define COMPRESSOR_RELAY_PIN 22
+#define COMPRESSOR_RELAY_PIN 27
 #define NTC_POWER_PIN        28
 
 /* Timeout */

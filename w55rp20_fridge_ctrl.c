@@ -312,7 +312,7 @@ main()
     }
 
     // Control fridge compressor
-    /* if (gdevcfg.temp_current > (gdevcfg.temp_setpoint + gdevcfg.hysterersis)) {
+    if (gdevcfg.temp_current > (gdevcfg.temp_setpoint + gdevcfg.hysteresis)) {
 
       vscpEventEx ex;
       memset(&ex, 0, sizeof(ex));
@@ -356,7 +356,7 @@ main()
 
         vscp_frmw2_callback_send_event_ex(NULL, &ex);
       }
-    } */
+    } 
 
     // Heartbeat
     if (gvscpcfg.m_interval_heartbeat && (millis() > (heart_beat_start_ms + gvscpcfg.m_interval_heartbeat))) {
