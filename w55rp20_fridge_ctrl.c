@@ -131,6 +131,7 @@ static uint8_t g_mqtt_broker_ip[4] = { 192, 168, 1, 7 };
 static Network g_mqtt_network;
 static MQTTClient g_mqtt_client;
 static MQTTPacket_connectData g_mqtt_packet_connect_data = MQTTPacket_connectData_initializer;
+
 static MQTTMessage g_mqtt_message;
 
 /* Timer  */
@@ -165,6 +166,11 @@ main()
   uint32_t fridge_temp_read_start_ms = 0; // Interval for fridge temperature read
   uint32_t heart_beat_start_ms       = 0; // Timer for heart beats
   uint32_t periodic_start_ms         = 0; // Timer for periodic temperature events
+
+  g_mqtt_packet_connect_data.username.cstring = "vscp";
+  g_mqtt_packet_connect_data.username.lenstring.len = 4;
+  g_mqtt_packet_connect_data.password.cstring = "secret";
+  g_mqtt_packet_connect_data.password.lenstring.len = 6;
 
   set_clock_khz();
   stdio_init_all();
@@ -281,7 +287,7 @@ main()
 
   printf(" Subscribed to topic %s\n", g_mqtt_pub_topic_base);
 
-  heart_beat_start_ms       = 0; // millis() + gvscpcfg.m_interval_heartbeat*2;
+  heart_beat_start_ms       = 0; 
   periodic_start_ms         = millis();
   fridge_temp_read_start_ms = millis();
 
@@ -391,10 +397,11 @@ main()
       ex.timestamp  = vscp_frmw2_callback_get_timestamp(NULL);
       ex.vscp_class = VSCP_CLASS1_MEASUREMENT;
       ex.vscp_type  = VSCP_TYPE_MEASUREMENT_TEMPERATURE;
-      ex.sizeData   = 3;
-      ex.data[0]    = 0b01101000;                         // Integer | Celsius | Sensor index = 0
-      ex.data[1]    = (gdevcfg.temp_current >> 8) & 0xff; // MSB
-      ex.data[2]    = gdevcfg.temp_current & 0xff;        // LSB
+      ex.sizeData   = 4;
+      ex.data[0]    = 0b10001000;                         // Integer | Celsius | Sensor index = 0
+      ex.data[1]    = 0x82; // Decimal point to steps to the left
+      ex.data[2]    = (gdevcfg.temp_current >> 8) & 0xff; // MSB
+      ex.data[3]    = gdevcfg.temp_current & 0xff;        // LSB
 
       vscp_frmw2_callback_send_event_ex(NULL, &ex);
 
@@ -670,7 +677,16 @@ vscp_frmw2_callback_get_timestamp(void *const puserdata)
 
   t   = get_absolute_time();
   tus = to_us_since_boot(t);
-  return (uint32_t) tus;
+  return tus;
+}
+
+uint32_t
+vscp_frmw2_callback_get_milliseconds(void *const puserdata)
+{
+  absolute_time_t t;
+
+  t   = get_absolute_time();
+  return to_ms_since_boot(t);
 }
 
 void
@@ -766,7 +782,7 @@ vscp_frmw2_callback_get_ip_addr(void *const puserdata, uint8_t *pipaddr, uint8_t
 int
 vscp_frmw2_callback_read_reg(void *const puserdata, uint16_t page, uint32_t reg, uint8_t *pval)
 {
-  printf("Read VSCP register...\n");
+  printf("Read VSCP register... %d \n", reg);
   switch (reg) {
 
     case FRIDGE_REG_ZONE:
@@ -940,7 +956,7 @@ vscp_frmw2_callback_send_event_ex(void *const puserdata, vscpEventEx *pex)
     return rv;
   }
 
-  // printf("[%s]", bufEvent);
+  printf("Send [%s]", bufEvent);
 
   /* Configure publish message */
   MQTTMessage mqtt_msg;
