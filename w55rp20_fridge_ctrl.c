@@ -822,9 +822,91 @@ vscp_frmw2_callback_read_reg(void *const puserdata, uint16_t page, uint32_t reg,
 int
 vscp_frmw2_callback_write_reg(void *const puserdata, uint16_t page, uint32_t reg, uint8_t val)
 {
-  int rv;
+  printf("Write VSCP register...\n");
 
-  return rv;
+  switch (reg) {
+
+    case FRIDGE_REG_ZONE:
+      gvscpcfg.m_zone = val;
+      break;
+
+    case FRIDGE_REG_SUBZONE:
+      gvscpcfg.m_subzone = val;
+      break;
+
+    case FRIDGE_REG_STATUS:
+      // Read Only
+      break;
+
+    case FRIDGE_REG_CONFIG:
+      if (val & FRIDGE_CONFIG_ENABLE) {
+        gdevcfg.bActive = true;
+      }
+      else {
+        gdevcfg.bActive = false;
+      }
+
+      if (val & FRIDGE_CONFIG_ALARM_LOW) {
+        gdevcfg.bAlarmOnLow = true;
+      }
+      else {
+        gdevcfg.bAlarmOnLow = false;
+      }
+
+      if (val & FRIDGE_CONFIG_ALARM_HIGH) {
+        gdevcfg.bAlarmOnHigh = true;
+      }
+      else {
+        gdevcfg.bAlarmOnHigh = false;
+      }
+      break;
+
+    case FRIDGE_REG_TEMP_EVENT_PERIOD:
+      gdevcfg.temp_report_period = val;
+      break;
+
+    case FRIDGE_REG_TEMP_MSB:
+      // Read only
+      break;
+
+    case FRIDGE_REG_TEMP_LSB:
+      // Read only
+      break;
+
+    case FRIDGE_REG_B_MSB:
+      gdevcfg.bCoefficient = (
+        (uint16_t)val << 8) + gdevcfg.bCoefficient;
+      break;
+
+    case FRIDGE_REG_B_LSB:
+      gdevcfg.bCoefficient =  (gdevcfg.bCoefficient &  0xff00) + val;
+      break;
+
+    case FRIDGE_REG_LOW_ALARM_MSB:
+      gdevcfg.temp_alarm_low = ((uint16_t)val << 8) + gdevcfg.temp_alarm_low;
+      break;
+
+    case FRIDGE_REG_LOW_ALARM_LSB:
+      gdevcfg.temp_alarm_low =  (gdevcfg.temp_alarm_low &  0xff00) + val;
+      break;
+
+    case FRIDGE_REG_HIGH_ALARM_MSB:
+      gdevcfg.temp_alarm_high = ((uint16_t)val << 8) + gdevcfg.temp_alarm_high;
+      break;
+
+    case FRIDGE_REG_HIGH_ALARM_LSB:
+      gdevcfg.temp_alarm_high =  (gdevcfg.bCoefficient &  0xff00) + val;
+      break;
+
+    case FRIDGE_REG_HYSTERESIS:
+      gdevcfg.hysteresis = val;
+      break;
+
+    case FRIDGE_REG_SETTEMP:
+      gdevcfg.temp_setpoint = val;
+      break;
+  }
+  return VSCP_ERROR_SUCCESS;
 }
 
 int

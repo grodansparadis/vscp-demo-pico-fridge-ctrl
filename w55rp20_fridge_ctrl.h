@@ -81,8 +81,16 @@
 #define FRIDGE_REG_SETTEMP           14
 
 // *** Defaults ***
-#define DEFAULT_ZONE    0
-#define DEFAULT_SUBZONE 0
+#define FRIDGE_DEFAULT_ZONE    0
+#define FRIDGE_DEFAULT_SUBZONE 0
+
+/* Status register bits */
+#define FRIDGE_STATUS_COMPRESSOR 0
+
+/* Config register bits */
+#define FRIDGE_CONFIG_ALARM_HIGH 0
+#define FRIDGE_CONFIG_ALARM_LOW  1
+#define FRIDGE_CONFIG_ENABLE     7
 
 // NTC
 #define DEFAULT_NTC_COEFFICIENT      3450
