@@ -39,6 +39,7 @@
 /* I/O Pins */
 #define COMPRESSOR_RELAY_PIN 27
 #define NTC_POWER_PIN        28
+#define NTC_ADC_PIN          26 // ADC0
 
 /* Timeout */
 #define DEFAULT_MQTT_TIMEOUT 1000 // 1 second

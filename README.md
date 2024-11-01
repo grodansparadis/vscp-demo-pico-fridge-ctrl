@@ -1,5 +1,8 @@
 # vscp-demo-pico-fridge-ctrl
-A simple (VSCP)[https://vscp.org] demo that can be used to control temperature of a fridge using the [W55RP20-EVB-PICO](https://docs.wiznet.io/Product/ioNIC/W55RP20/w55rp20-evb-pico) from [WIZnet](https://docs.wiznet.io) using the MQTT protocol as a transport mechanism.
+
+![](kicad/schema.png)
+
+A VERY simple (VSCP)[https://vscp.org] demo that can be used to control temperature of a fridge using the [W55RP20-EVB-PICO](https://docs.wiznet.io/Product/ioNIC/W55RP20/w55rp20-evb-pico) from [WIZnet](https://docs.wiznet.io) using the MQTT protocol as a transport mechanism.
 
 The firmware is really simple. It has a setpoint (including a hysteresis setting) and a low and high alarm. Temperature and alarms are sent as VSCP events to a MQTT sever of choice.
 
