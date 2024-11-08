@@ -8,6 +8,8 @@ The firmware is really simple. It has a setpoint (including a hysteresis setting
 
 The hardware is ethernet connected and uses a NTC thermistor for temperature readings and then current temperature values is calculated using the Steinhart–Hart equation. There are some good information on thermistors [here](https://en.wikipedia.org/wiki/Thermistor).
 
+There is a dumb sister project [here]() that use no communication and connection to the world, just a hard setpoint and a LCD display.
+
 ## MQTT
 
 ### Publish topic
