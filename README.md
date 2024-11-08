@@ -76,9 +76,12 @@ As all VSCP devices the fridge controller have register that defines it's functi
 
 The module description file can be downloaded from (here)[https://www.eurosource.se/w55rp20_frc01.xml]
 
+# Some project pictures
 
-![](./IMG_20241028_211113.jpg)
-![](./IMG_20241108_161251.jpg)
-![](./IMG_20241108_161251.jpg)
-![](./IMG_20241108_161251.jpg)
-![](./IMG_20241108_161251.jpg)
+![](./images/IMG_20241108_170722.jpg)
+![](./images/IMG_20241028_211113.jpg)
+![](./images/IMG_20241108_161251.jpg)
+![](./images/IMG_20241108_161258.jpg)
+![](./images/IMG_20241108_170004.jpg)
+
+
