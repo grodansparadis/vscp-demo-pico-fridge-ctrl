@@ -542,6 +542,267 @@
 				)
 			)
 		)
+		(symbol "Display_Character:NHD-C0220BIZ"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -6.35 11.43 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "NHD-C0220BIZ"
+				(at 8.89 11.43 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "Display:NHD-C0220BiZ"
+				(at 0 -15.24 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "http://www.newhavendisplay.com/specs/NHD-C0220BiZ-FSW-FBW-3V3M.pdf"
+				(at -7.62 15.24 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "LCD 20x2 Alphanumeric 10pin Blue/White/Green Backlight, i2c, 3.3V VDD"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "display LCD 20x2"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "NHD*C0220BiZ*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "NHD-C0220BIZ_0_1"
+				(rectangle
+					(start -7.62 10.16)
+					(end 7.62 -10.16)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(symbol "NHD-C0220BIZ_1_1"
+				(pin input line
+					(at -10.16 -2.54 0)
+					(length 2.54)
+					(name "~{RST}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 10.16 -5.08 180)
+					(length 2.54)
+					(name "K"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at -10.16 0 0)
+					(length 2.54)
+					(name "SCL"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -10.16 2.54 0)
+					(length 2.54)
+					(name "SDA"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 0 -12.7 90)
+					(length 2.54)
+					(name "VSS"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 0 12.7 270)
+					(length 2.54)
+					(name "VDD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -10.16 -7.62 0)
+					(length 2.54)
+					(name "VOUT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 10.16 5.08 180)
+					(length 2.54)
+					(name "C1+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 10.16 2.54 180)
+					(length 2.54)
+					(name "C1-"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 10.16 -2.54 180)
+					(length 2.54)
+					(name "A"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
 		(symbol "Relay:Fujitsu_FTR-LYAA005x"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -1293,6 +1554,26 @@
 	)
 	(wire
 		(pts
+			(xy 52.07 139.7) (xy 100.33 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0d017a8a-f4da-4214-a39c-a8229577112c")
+	)
+	(wire
+		(pts
+			(xy 110.49 121.92) (xy 110.49 129.54)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "212c17a2-590a-43c3-8b34-28dfb4a1a151")
+	)
+	(wire
+		(pts
 			(xy 175.26 68.58) (xy 182.88 68.58)
 		)
 		(stroke
@@ -1463,6 +1744,16 @@
 	)
 	(wire
 		(pts
+			(xy 52.07 142.24) (xy 100.33 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "de4430d5-e401-4360-9ea2-543e2777c58c")
+	)
+	(wire
+		(pts
 			(xy 95.25 73.66) (xy 95.25 77.47)
 		)
 		(stroke
@@ -1470,6 +1761,16 @@
 			(type default)
 		)
 		(uuid "e54c8cf5-fde0-4e4b-97b8-80b8e99030c7")
+	)
+	(wire
+		(pts
+			(xy 110.49 154.94) (xy 110.49 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f6b28add-737d-4349-b23a-b13b035ec4c3")
 	)
 	(text "GP28"
 		(exclude_from_sim no)
@@ -1481,6 +1782,26 @@
 		)
 		(uuid "2980417d-81f2-40e9-bde0-3d976c8381af")
 	)
+	(text "Fridge Controler"
+		(exclude_from_sim no)
+		(at 187.452 170.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "50bcfb19-fbd5-4cbb-a244-19299f1bdfdb")
+	)
+	(text "GP5"
+		(exclude_from_sim no)
+		(at 48.006 142.494 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "585bcdf6-692e-414b-a9b6-84ef87420cc6")
+	)
 	(text "GP26/ADC0"
 		(exclude_from_sim no)
 		(at 66.802 65.024 0)
@@ -1490,6 +1811,26 @@
 			)
 		)
 		(uuid "5c01e44a-eafe-491a-9fee-66dccbf5884c")
+	)
+	(text "Connected to RP2040"
+		(exclude_from_sim no)
+		(at 189.992 173.736 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "6991863c-73b3-4364-9040-32d29825572b")
+	)
+	(text "GP4"
+		(exclude_from_sim no)
+		(at 48.26 138.938 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "a51a8caa-c69e-4ec1-92d2-c3a85c93d1db")
 	)
 	(text "GP27"
 		(exclude_from_sim no)
@@ -1568,6 +1909,138 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+3.3V")
+		(at 110.49 121.92 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0b059ebb-c822-4ca0-aa1a-25b48c6ab235")
+		(property "Reference" "#PWR05"
+			(at 110.49 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3.3V"
+			(at 110.49 117.7869 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 110.49 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 110.49 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
+			(at 110.49 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "a1866eb5-1239-4d17-97e3-f88c1198b9b3")
+		)
+		(instances
+			(project "kicad_fridge_ctrl"
+				(path "/1a722746-0189-4649-99c6-9277520c9c37"
+					(reference "#PWR05")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 110.49 160.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "20d1b9c8-c89c-43a0-a6be-474e03286883")
+		(property "Reference" "#PWR04"
+			(at 110.49 166.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 110.49 164.1531 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 110.49 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 110.49 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 110.49 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "9add3ae0-c29e-4784-8f4b-edd09ab1cf87")
+		)
+		(instances
+			(project "kicad_fridge_ctrl"
+				(path "/1a722746-0189-4649-99c6-9277520c9c37"
+					(reference "#PWR04")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:Thermistor_NTC")
 		(at 95.25 58.42 0)
 		(unit 1)
@@ -1632,6 +2105,100 @@
 			(project ""
 				(path "/1a722746-0189-4649-99c6-9277520c9c37"
 					(reference "TH1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Display_Character:NHD-C0220BIZ")
+		(at 110.49 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "646abaa9-3101-4e1b-a113-265ff95c087f")
+		(property "Reference" "U1"
+			(at 112.6841 127.9355 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "LCD 16 x 2  I2C"
+			(at 112.6841 130.3598 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Display:NHD-C0220BiZ"
+			(at 110.49 157.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "http://www.newhavendisplay.com/specs/NHD-C0220BiZ-FSW-FBW-3V3M.pdf"
+			(at 102.87 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "LCD 20x2 Alphanumeric 10pin Blue/White/Green Backlight, i2c, 3.3V VDD"
+			(at 110.49 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "7"
+			(uuid "9b777d49-9720-4cb2-a422-0fcebb43f972")
+		)
+		(pin "2"
+			(uuid "7ddc9135-4a3b-45ff-9e55-49eef3ac8cb3")
+		)
+		(pin "4"
+			(uuid "d97a3e60-d250-4521-bbfb-aeb2563d5fc2")
+		)
+		(pin "1"
+			(uuid "32c7f4f7-6c23-437d-a1f4-47d8116633ed")
+		)
+		(pin "6"
+			(uuid "b90ca4b8-06be-4376-b303-9ce29e7e32f8")
+		)
+		(pin "3"
+			(uuid "a800a0ee-ef61-4a2b-825a-b12978037828")
+		)
+		(pin "9"
+			(uuid "bcca722c-cedd-4412-a2b5-b55e08444712")
+		)
+		(pin "10"
+			(uuid "c30c318f-96bd-41d5-9f98-ff405a3d2b5b")
+		)
+		(pin "8"
+			(uuid "0ae1c968-c9a5-4a40-9c7b-448b6432ed84")
+		)
+		(pin "5"
+			(uuid "da30ff55-dea5-4a24-a357-b194faec9ace")
+		)
+		(instances
+			(project ""
+				(path "/1a722746-0189-4649-99c6-9277520c9c37"
+					(reference "U1")
 					(unit 1)
 				)
 			)

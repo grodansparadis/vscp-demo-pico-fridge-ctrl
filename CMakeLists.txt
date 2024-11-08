@@ -40,9 +40,9 @@ set(TARGET_NAME w55rp20_fridge_ctrl)
 
 add_executable(${TARGET_NAME}
         ${TARGET_NAME}.c
+        lcd_1602_i2c.c
         ${CMAKE_SOURCE_DIR}/vscp-firmware/common/vscp-firmware-helper.c
         ${CMAKE_SOURCE_DIR}/vscp-firmware/common/vscp-firmware-level2.c
-#        tiny-json/tiny-json.h
         vscp-firmware/third-party/cJSON/cJSON.c
         )
 
@@ -52,7 +52,6 @@ target_include_directories(${TARGET_NAME} PRIVATE
         WIZnet-PICO-C/port/ioLibrary_Driver/inc/
         WIZnet-PICO-C/libraries/ioLibrary_Driver/Ethernet/
         WIZnet-PICO-C/libraries/ioLibrary_Driver/Internet/MQTT/
-#        tiny-json
         vscp-firmware/common 
         vscp-firmware/third-party/cJSON
         vscp/src/vscp/common
@@ -61,6 +60,7 @@ target_include_directories(${TARGET_NAME} PRIVATE
 target_link_libraries(${TARGET_NAME} PRIVATE
         pico_stdlib
         hardware_spi
+        hardware_i2c
         hardware_dma
         hardware_adc
         ETHERNET_FILES

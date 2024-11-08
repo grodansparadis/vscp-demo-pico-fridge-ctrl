@@ -47,7 +47,7 @@
 /* Fridge temperature read interval (ms)*/
 #define FRIDGE_TEMPERATURE_INTERVAL 20000
 
-/* Bits is alarmstatus for alarm notification */
+/* Bits is alarm status for alarm notification */
 #define ALARM_LOW_STATUS  1
 #define ALARM_HIGH_STATUS 2
 

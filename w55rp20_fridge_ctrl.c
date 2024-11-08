@@ -27,9 +27,11 @@
 #include <string.h>
 #include <time.h>
 
+#include "hardware/i2c.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 #include "hardware/watchdog.h"
+#include "pico/binary_info.h"
 #include "pico/bootrom.h"
 
 #include "port_common.h"
@@ -49,6 +51,25 @@
 
 #include "w55rp20_fridge_ctrl.h"
 // clang-format on
+
+// LCD funcs
+void
+lcd_init(void);
+
+void
+i2c_write_byte(uint8_t val);
+void
+lcd_toggle_enable(uint8_t val);
+void
+lcd_send_byte(uint8_t val, int mode);
+void
+lcd_clear(void);
+void
+lcd_char(char val);
+void
+lcd_string(const char *s);
+void
+lcd_set_cursor(int line, int position);
 
 /* Network */
 static wiz_NetInfo g_net_info = {
@@ -167,9 +188,9 @@ main()
   uint32_t heart_beat_start_ms       = 0; // Timer for heart beats
   uint32_t periodic_start_ms         = 0; // Timer for periodic temperature events
 
-  g_mqtt_packet_connect_data.username.cstring = "vscp";
+  g_mqtt_packet_connect_data.username.cstring       = "vscp";
   g_mqtt_packet_connect_data.username.lenstring.len = 4;
-  g_mqtt_packet_connect_data.password.cstring = "secret";
+  g_mqtt_packet_connect_data.password.cstring       = "secret";
   g_mqtt_packet_connect_data.password.lenstring.len = 6;
 
   set_clock_khz();
@@ -200,6 +221,20 @@ main()
   // watchdog_enable(1000, 1);
 
   adc_init();
+
+  // LCD
+
+  // This example will use I2C0 on the default SDA and SCL pins (4, 5 on a Pico)
+  i2c_init(i2c_default, 1 * 1000);
+  gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
+  gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
+  gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
+  gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+
+  // Make the I2C pins available to picotool
+  bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
+
+  lcd_init();
 
   rv = init_vscp(&gvscpcfg);
   rv = vscp_frmw2_init(&gvscpcfg);
@@ -287,7 +322,7 @@ main()
 
   printf(" Subscribed to topic %s\n", g_mqtt_pub_topic_base);
 
-  heart_beat_start_ms       = 0; 
+  heart_beat_start_ms       = 0;
   periodic_start_ms         = millis();
   fridge_temp_read_start_ms = millis();
 
@@ -307,8 +342,25 @@ main()
 
     // Temperature measurement
     if (millis() > (fridge_temp_read_start_ms + FRIDGE_TEMPERATURE_INTERVAL)) {
+      
+      char buf[20];
+
       gdevcfg.temp_current      = readFridgeTemperature();
       fridge_temp_read_start_ms = millis();
+
+      lcd_clear();
+      lcd_set_cursor(0, 0);
+      sprintf(buf, "Temp: %.01f C", gdevcfg.temp_current/100.0);
+      lcd_string(buf);
+
+      lcd_set_cursor(1, 0);
+      if (gpio_get(COMPRESSOR_RELAY_PIN)) {
+        sprintf(buf, "Compressor: ON");
+      }
+      else {
+        sprintf(buf, "Compressor: OFF");
+      }
+      lcd_string(buf);
     }
 
     // Control fridge compressor
@@ -356,7 +408,7 @@ main()
 
         vscp_frmw2_callback_send_event_ex(NULL, &ex);
       }
-    } 
+    }
 
     // Heartbeat
     if (gvscpcfg.m_interval_heartbeat && (millis() > (heart_beat_start_ms + gvscpcfg.m_interval_heartbeat))) {
@@ -399,7 +451,7 @@ main()
       ex.vscp_type  = VSCP_TYPE_MEASUREMENT_TEMPERATURE;
       ex.sizeData   = 4;
       ex.data[0]    = 0b10001000;                         // Integer | Celsius | Sensor index = 0
-      ex.data[1]    = 0x82; // Decimal point to steps to the left
+      ex.data[1]    = 0x82;                               // Decimal point to steps to the left
       ex.data[2]    = (gdevcfg.temp_current >> 8) & 0xff; // MSB
       ex.data[3]    = gdevcfg.temp_current & 0xff;        // LSB
 
@@ -685,7 +737,7 @@ vscp_frmw2_callback_get_milliseconds(void *const puserdata)
 {
   absolute_time_t t;
 
-  t   = get_absolute_time();
+  t = get_absolute_time();
   return to_ms_since_boot(t);
 }
 
@@ -743,7 +795,7 @@ vscp_frmw2_callback_set_event_time(void *const puserdata, vscpEventEx *const pex
 int
 vscp_frmw2_callback_restore_defaults(void *const puserdata)
 {
-  gdevcfg.bCoefficient        = 0xf68;
+  gdevcfg.bCoefficient       = 0xf68;
   gdevcfg.bActive            = true;
   gdevcfg.bAlarmOnLow        = true;
   gdevcfg.bAlarmOnHigh       = true;
