@@ -342,7 +342,7 @@ main()
 
     // Temperature measurement
     if (millis() > (fridge_temp_read_start_ms + FRIDGE_TEMPERATURE_INTERVAL)) {
-      
+
       char buf[20];
 
       gdevcfg.temp_current      = readFridgeTemperature();
@@ -350,7 +350,7 @@ main()
 
       lcd_clear();
       lcd_set_cursor(0, 0);
-      sprintf(buf, "Temp: %.01f C", gdevcfg.temp_current/100.0);
+      sprintf(buf, "Temp: %.01f C", gdevcfg.temp_current / 100.0);
       lcd_string(buf);
 
       lcd_set_cursor(1, 0);
