@@ -33,5 +33,6 @@
 
 
 #misc
-build
+build/
+kicad/kicad_fridge_ctrl/kicad_fridge_ctrl-backups/
 
